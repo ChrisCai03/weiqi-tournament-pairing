@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "weiqi-tournament-pairing"
+version = "0.1.0"
+description = "Open-source Weiqi/Go tournament pairing software."
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [{ name = "ChrisCai03" }]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "hypothesis>=6.0",
+]
+
+[project.scripts]
+pairing = "pairing.cli.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q"

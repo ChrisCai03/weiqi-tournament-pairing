@@ -1,0 +1,1 @@
+"""Weiqi tournament pairing package."""
