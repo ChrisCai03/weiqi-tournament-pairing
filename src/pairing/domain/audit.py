@@ -9,6 +9,18 @@ def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _optional_int(value: object) -> int | None:
+    if value is None:
+        return None
+    return int(value)
+
+
+def _optional_str(value: object) -> str | None:
+    if value is None:
+        return None
+    return str(value)
+
+
 @dataclass(slots=True)
 class AuditLogEntry:
     id: str
@@ -52,8 +64,8 @@ class AuditLogEntry:
             event_type=str(data["event_type"]),
             actor=str(data["actor"]),
             summary=str(data["summary"]),
-            round_number=data.get("round_number"),  # type: ignore[arg-type]
+            round_number=_optional_int(data.get("round_number")),
             details=dict(data.get("details", {})),
-            state_hash_before=data.get("state_hash_before"),  # type: ignore[arg-type]
-            state_hash_after=data.get("state_hash_after"),  # type: ignore[arg-type]
+            state_hash_before=_optional_str(data.get("state_hash_before")),
+            state_hash_after=_optional_str(data.get("state_hash_after")),
         )

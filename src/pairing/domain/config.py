@@ -3,6 +3,24 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 
 
+def _parse_bool(value: object) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"true", "1"}:
+            return True
+        if normalized in {"false", "0"}:
+            return False
+    raise ValueError(f"Invalid boolean value: {value!r}")
+
+
+def _parse_tiebreak_order(value: object) -> list[str]:
+    if not isinstance(value, list):
+        raise ValueError("tiebreak_order must be a list")
+    return [str(item) for item in value]
+
+
 @dataclass(slots=True)
 class TournamentConfig:
     round_count: int = 5
@@ -32,12 +50,12 @@ class TournamentConfig:
             score_loss=float(data.get("score_loss", 0.0)),
             score_draw=float(data.get("score_draw", 0.5)),
             score_bye=float(data.get("score_bye", 1.0)),
-            allow_draws=bool(data.get("allow_draws", False)),
+            allow_draws=_parse_bool(data.get("allow_draws", False)),
             rank_system=str(data.get("rank_system", "dan_kyu")),
             colour_policy=str(data.get("colour_policy", "balanced")),
             bye_policy=str(data.get("bye_policy", "lowest_score_no_previous_bye")),
             handicap_policy=str(data.get("handicap_policy", "none")),
             affiliation_policy=str(data.get("affiliation_policy", "avoid_when_possible")),
-            tiebreak_order=[str(item) for item in data.get("tiebreak_order", ["score", "wins", "sos", "sosos"])],
+            tiebreak_order=_parse_tiebreak_order(data.get("tiebreak_order", ["score", "wins", "sos", "sosos"])),
             random_seed=int(data.get("random_seed", 1)),
         )
