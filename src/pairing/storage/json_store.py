@@ -30,8 +30,13 @@ def load_tournament(path: str | Path) -> Tournament:
     except json.JSONDecodeError as exc:
         raise TournamentStoreError(f"Invalid tournament JSON: {source}") from exc
 
-    schema_version = int(data.get("schema_version", 0))
-    if schema_version != SCHEMA_VERSION:
-        raise TournamentStoreError(f"Unsupported schema version: {schema_version}")
+    try:
+        schema_version = int(data.get("schema_version", 0))
+        if schema_version != SCHEMA_VERSION:
+            raise TournamentStoreError(f"Unsupported schema version: {schema_version}")
 
-    return Tournament.from_dict(data)
+        return Tournament.from_dict(data)
+    except TournamentStoreError:
+        raise
+    except (AttributeError, KeyError, TypeError, ValueError) as exc:
+        raise TournamentStoreError(f"Invalid tournament file structure: {source}") from exc

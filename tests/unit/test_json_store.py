@@ -36,6 +36,30 @@ def test_load_rejects_unknown_schema_version(tmp_path):
         load_tournament(path)
 
 
+def test_load_rejects_array_json_as_invalid_structure(tmp_path):
+    path = tmp_path / "array.tgo.json"
+    path.write_text(json.dumps([]), encoding="utf-8")
+
+    with pytest.raises(TournamentStoreError, match="Invalid tournament file structure"):
+        load_tournament(path)
+
+
+def test_load_rejects_missing_tournament_data_as_invalid_structure(tmp_path):
+    path = tmp_path / "missing-tournament.tgo.json"
+    path.write_text(json.dumps({"schema_version": 1}), encoding="utf-8")
+
+    with pytest.raises(TournamentStoreError, match="Invalid tournament file structure"):
+        load_tournament(path)
+
+
+def test_load_rejects_non_numeric_schema_version_as_invalid_structure(tmp_path):
+    path = tmp_path / "bad-schema.tgo.json"
+    path.write_text(json.dumps({"schema_version": "one"}), encoding="utf-8")
+
+    with pytest.raises(TournamentStoreError, match="Invalid tournament file structure"):
+        load_tournament(path)
+
+
 def test_load_rejects_missing_file(tmp_path):
     with pytest.raises(TournamentStoreError, match="Tournament file not found"):
         load_tournament(tmp_path / "missing.tgo.json")
