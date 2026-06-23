@@ -9,11 +9,11 @@ The first prototype is a correctness-first Python CLI that stores tournaments as
 Create a tournament:
 
 ```powershell
-python -m pairing.cli.main create example.tgo.json --name "Example Weiqi Open" --rounds 5
+$env:PYTHONPATH = "src"; python -m pairing.cli.main create example.tgo.json --name "Example Weiqi Open" --rounds 5
 ```
 
 Import players:
 
 ```powershell
-python -m pairing.cli.main import-players example.tgo.json players.csv
+$env:PYTHONPATH = "src"; python -m pairing.cli.main import-players example.tgo.json players.csv
 ```
