@@ -49,7 +49,7 @@ def main(argv: list[str] | None = None) -> int:
             save_tournament(tournament, Path(args.tournament_path))
             print(f"Imported {len(report.players)} players.")
             return 0
-    except (TournamentStoreError, OSError) as exc:
+    except (TournamentStoreError, OSError, ValueError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
 

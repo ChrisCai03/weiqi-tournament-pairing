@@ -86,11 +86,19 @@ class Player:
 
     @classmethod
     def from_dict(cls, data: dict[str, object]) -> "Player":
+        parsed_rank = parse_rank(str(data["rank"]))
+        rank_sort_value = int(data["rank_sort_value"])
+        if rank_sort_value != parsed_rank.sort_value:
+            raise ValueError(
+                f"Inconsistent rank data for player {data['id']}: "
+                f"rank {parsed_rank.label!r} does not match rank_sort_value {rank_sort_value}"
+            )
+
         return cls(
             id=str(data["id"]),
             display_name=str(data["display_name"]),
-            rank=str(data["rank"]),
-            rank_sort_value=int(data["rank_sort_value"]),
+            rank=parsed_rank.label,
+            rank_sort_value=rank_sort_value,
             country=str(data.get("country", "")),
             club=str(data.get("club", "")),
             school=str(data.get("school", "")),

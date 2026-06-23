@@ -28,6 +28,9 @@ class Tournament:
 
     @classmethod
     def create(cls, name: str, *, round_count: int = 5) -> "Tournament":
+        if round_count <= 0:
+            raise ValueError("Round count must be positive.")
+
         config = TournamentConfig(round_count=round_count)
         tournament = cls(
             id=str(uuid4()),
@@ -47,10 +50,13 @@ class Tournament:
         return tournament
 
     def add_players(self, players: list[Player]) -> None:
-        next_seed = len(self.players) + 1
-        for index, player in enumerate(players):
+        next_seed = max((player.seed_number for player in self.players), default=0)
+        for player in players:
             if player.seed_number == 0:
-                player.seed_number = next_seed + index
+                next_seed += 1
+                player.seed_number = next_seed
+            else:
+                next_seed = max(next_seed, player.seed_number)
             self.players.append(player)
         self.audit_log.append(
             AuditLogEntry.create(

@@ -1,6 +1,9 @@
 import csv
 
 from pairing.cli.main import main
+from pairing.domain.player import Player
+from pairing.domain.tournament import Tournament
+from pairing.storage.json_store import save_tournament
 from pairing.storage.json_store import load_tournament
 
 
@@ -13,6 +16,17 @@ def test_cli_create_command(tmp_path):
     tournament = load_tournament(tournament_path)
     assert tournament.name == "Example Weiqi Open"
     assert tournament.config.round_count == 5
+
+
+def test_cli_create_command_rejects_non_positive_rounds(tmp_path, capsys):
+    tournament_path = tmp_path / "example.tgo.json"
+
+    exit_code = main(["create", str(tournament_path), "--name", "Example Weiqi Open", "--rounds", "0"])
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert captured.err == "Error: Round count must be positive.\n"
+    assert not tournament_path.exists()
 
 
 def test_cli_import_players_command(tmp_path):
@@ -30,6 +44,30 @@ def test_cli_import_players_command(tmp_path):
     tournament = load_tournament(tournament_path)
     assert [player.display_name for player in tournament.players] == ["Alice", "Bob"]
     assert [player.seed_number for player in tournament.players] == [1, 2]
+
+
+def test_cli_import_players_command_uses_max_existing_seed(tmp_path):
+    tournament_path = tmp_path / "example.tgo.json"
+    players_path = tmp_path / "players.csv"
+    with players_path.open("w", encoding="utf-8", newline="") as file:
+        writer = csv.DictWriter(file, fieldnames=["name", "rank"])
+        writer.writeheader()
+        writer.writerow({"name": "Charlie", "rank": "2d"})
+        writer.writerow({"name": "Dana", "rank": "4k"})
+
+    tournament = Tournament.create("Example Weiqi Open")
+    tournament.players.extend(
+        [
+            Player.create("Alice", rank="3d", seed_number=2),
+            Player.create("Bob", rank="5k", seed_number=10),
+        ]
+    )
+    save_tournament(tournament, tournament_path)
+
+    assert main(["import-players", str(tournament_path), str(players_path)]) == 0
+
+    loaded_tournament = load_tournament(tournament_path)
+    assert [player.seed_number for player in loaded_tournament.players] == [2, 10, 11, 12]
 
 
 def test_cli_import_players_missing_tournament_returns_error(tmp_path, capsys):

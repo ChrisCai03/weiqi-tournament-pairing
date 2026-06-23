@@ -2,6 +2,7 @@ import pytest
 
 from pairing.domain.audit import AuditLogEntry
 from pairing.domain.config import TournamentConfig
+from pairing.domain.player import Player
 
 
 def test_tournament_config_from_dict_parses_bool_values() -> None:
@@ -45,3 +46,15 @@ def test_audit_log_entry_from_dict_coerces_round_number_and_hashes() -> None:
     assert entry.round_number == 2
     assert entry.state_hash_before == "987"
     assert entry.state_hash_after is None
+
+
+def test_player_from_dict_rejects_inconsistent_rank_sort_value() -> None:
+    with pytest.raises(ValueError, match="Inconsistent rank data"):
+        Player.from_dict(
+            {
+                "id": "player-1",
+                "display_name": "Alice",
+                "rank": "3d",
+                "rank_sort_value": -3,
+            }
+        )
