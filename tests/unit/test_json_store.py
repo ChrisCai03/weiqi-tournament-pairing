@@ -71,3 +71,88 @@ def test_load_rejects_non_numeric_schema_version_as_invalid_structure(tmp_path):
 def test_load_rejects_missing_file(tmp_path):
     with pytest.raises(TournamentStoreError, match="Tournament file not found"):
         load_tournament(tmp_path / "missing.tgo.json")
+
+
+@pytest.mark.parametrize(
+    ("round_payload", "error_message"),
+    [
+        (
+            {
+                "number": 1,
+                "status": "draft",
+                "pairing_method": "swiss",
+                "pairing_seed": 1,
+                "games": [],
+            },
+            "Invalid tournament file structure",
+        ),
+        (
+            {
+                "number": 1,
+                "status": "draft",
+                "generated_at": "2026-06-23T00:00:00+00:00",
+                "pairing_method": "swiss",
+                "pairing_seed": 1,
+                "games": [
+                    {
+                        "id": "game-1",
+                        "round_number": 1,
+                        "board_number": 1,
+                        "black_player_id": "player-a",
+                        "white_player_id": "player-b",
+                    }
+                ],
+            },
+            "Invalid tournament file structure",
+        ),
+        (
+            {
+                "number": 1,
+                "status": "draft",
+                "generated_at": "2026-06-23T00:00:00+00:00",
+                "pairing_method": "swiss",
+                "pairing_seed": 1,
+                "games": [
+                    {
+                        "id": "game-1",
+                        "round_number": 1,
+                        "board_number": 1,
+                        "black_player_id": "player-a",
+                        "white_player_id": "player-b",
+                        "result": {"result_type": "pending"},
+                    }
+                ],
+            },
+            "Invalid tournament file structure",
+        ),
+        (
+            {
+                "number": 1,
+                "status": "draft",
+                "generated_at": "2026-06-23T00:00:00+00:00",
+                "pairing_method": "swiss",
+                "pairing_seed": 1,
+                "games": [
+                    {
+                        "id": "game-1",
+                        "round_number": 1,
+                        "board_number": 1,
+                        "black_player_id": "player-a",
+                        "white_player_id": "player-b",
+                        "result": {"status": "pending"},
+                    }
+                ],
+            },
+            "Invalid tournament file structure",
+        ),
+    ],
+)
+def test_load_rejects_malformed_round_payloads(tmp_path, round_payload, error_message):
+    path = tmp_path / "bad-round.tgo.json"
+    tournament = Tournament.create("Example Weiqi Open")
+    payload = tournament.to_dict()
+    payload["rounds"] = [round_payload]
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(TournamentStoreError, match=error_message):
+        load_tournament(path)

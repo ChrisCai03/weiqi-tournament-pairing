@@ -59,7 +59,7 @@ class Game:
             white_player_id=_optional_str(data.get("white_player_id")),
             handicap=int(data.get("handicap", 0)),
             komi=float(data.get("komi", 0.0)),
-            result=Result.from_dict(dict(data.get("result", {}))),
+            result=Result.from_dict(dict(data["result"])),
             pairing_explanation=[str(item) for item in data.get("pairing_explanation", [])],
             override_origin=str(data.get("override_origin", "engine")),
         )

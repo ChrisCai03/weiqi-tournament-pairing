@@ -70,3 +70,16 @@ def test_round_rejects_duplicate_board_numbers() -> None:
 
     with pytest.raises(ValueError, match="Duplicate board number"):
         Round.create(number=1, games=[game_one, game_two], pairing_method="swiss", pairing_seed=1)
+
+
+def test_round_rejects_games_with_mismatched_round_number() -> None:
+    game = Game.create(
+        round_number=2,
+        board_number=1,
+        black_player_id="player-a",
+        white_player_id="player-b",
+        pairing_explanation=[],
+    )
+
+    with pytest.raises(ValueError, match="Game round number 2 does not match round 1"):
+        Round.create(number=1, games=[game], pairing_method="swiss", pairing_seed=1)

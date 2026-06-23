@@ -48,8 +48,8 @@ class Result:
     @classmethod
     def from_dict(cls, data: dict[str, object]) -> "Result":
         return cls(
-            status=str(data.get("status", "pending")),
-            result_type=str(data.get("result_type", "pending")),
+            status=str(data["status"]),
+            result_type=str(data["result_type"]),
             winner_player_id=_optional_str(data.get("winner_player_id")),
             entered_at=_optional_str(data.get("entered_at")),
             entered_by=str(data.get("entered_by", "cli")),

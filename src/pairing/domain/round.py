@@ -33,7 +33,7 @@ class Round:
         pairing_seed: int,
         explanation_summary: list[str] | None = None,
     ) -> "Round":
-        _validate_unique_board_numbers(number, games)
+        _validate_games(number, games)
         return cls(
             number=number,
             status="draft",
@@ -63,11 +63,11 @@ class Round:
     def from_dict(cls, data: dict[str, object]) -> "Round":
         games = [Game.from_dict(dict(game)) for game in data.get("games", [])]
         number = int(data["number"])
-        _validate_unique_board_numbers(number, games)
+        _validate_games(number, games)
         return cls(
             number=number,
             status=str(data.get("status", "draft")),
-            generated_at=str(data.get("generated_at", _utc_now_iso())),
+            generated_at=str(data["generated_at"]),
             completed_at=_optional_str(data.get("completed_at")),
             pairing_method=str(data.get("pairing_method", "swiss")),
             pairing_seed=int(data.get("pairing_seed", 1)),
@@ -90,7 +90,12 @@ def _optional_str(value: object) -> str | None:
     return str(value)
 
 
-def _validate_unique_board_numbers(number: int, games: list[Game]) -> None:
+def _validate_games(number: int, games: list[Game]) -> None:
     board_numbers = [game.board_number for game in games]
     if len(board_numbers) != len(set(board_numbers)):
         raise ValueError(f"Duplicate board number in round {number}.")
+    for game in games:
+        if game.round_number != number:
+            raise ValueError(
+                f"Game round number {game.round_number} does not match round {number}."
+            )
