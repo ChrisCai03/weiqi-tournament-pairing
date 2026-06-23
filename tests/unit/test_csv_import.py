@@ -2,7 +2,7 @@ from pairing.import_export.csv_import import import_players_from_csv_text
 
 
 def test_import_players_from_csv_text():
-    csv_text = "name,rank,country,club,school,team,notes\nAlice,3d,SG,Club A,School A,,Captain\nBob,5k,SG,Club B,School B,,\n"
+    csv_text = "name,rank,country,club,school,team,notes\nAlice,3d,SG,Club A,School A,Team A,Captain\nBob,5k,SG,Club B,School B,,\n"
 
     report = import_players_from_csv_text(csv_text)
 
@@ -10,6 +10,11 @@ def test_import_players_from_csv_text():
     assert len(report.players) == 2
     assert report.players[0].display_name == "Alice"
     assert report.players[0].rank == "3d"
+    assert report.players[0].country == "SG"
+    assert report.players[0].club == "Club A"
+    assert report.players[0].school == "School A"
+    assert report.players[0].team_id == "Team A"
+    assert report.players[0].notes == "Captain"
     assert report.players[1].rank_sort_value == -5
     assert report.warnings == []
 
