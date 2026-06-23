@@ -36,6 +36,14 @@ def test_load_rejects_unknown_schema_version(tmp_path):
         load_tournament(path)
 
 
+def test_load_rejects_malformed_json(tmp_path):
+    path = tmp_path / "malformed.tgo.json"
+    path.write_text("{not json", encoding="utf-8")
+
+    with pytest.raises(TournamentStoreError, match="Invalid tournament JSON"):
+        load_tournament(path)
+
+
 def test_load_rejects_array_json_as_invalid_structure(tmp_path):
     path = tmp_path / "array.tgo.json"
     path.write_text(json.dumps([]), encoding="utf-8")
