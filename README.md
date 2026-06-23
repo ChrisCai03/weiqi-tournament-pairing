@@ -17,3 +17,9 @@ Import players:
 ```powershell
 $env:PYTHONPATH = "src"; python -m pairing.cli.main import-players example.tgo.json players.csv
 ```
+
+## Documentation
+
+- [Design spec](docs/superpowers/specs/2026-06-22-weiqi-tournament-design.md)
+- [CSV player import format](docs/csv-format.md)
+- [Tournament file format](docs/tournament-file-format.md)
