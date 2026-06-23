@@ -1,0 +1,118 @@
+# Project Context
+
+This file is a lightweight handoff note for future sessions working on the Stage 2 Swiss branch.
+
+## Repository
+
+- Main repo: `C:\Users\user\Documents\Pairing software dev`
+- Active Stage 2 worktree: `C:\Users\user\Documents\Pairing software dev\.worktrees\stage-2-swiss`
+- Stage 2 branch: `codex/stage-2-swiss`
+
+## High-Level Product Direction
+
+The project is an open-source local-first Weiqi/Go tournament pairing application.
+
+Current priorities:
+
+1. correctness
+2. auditability
+3. simple local workflow
+4. modular engine separate from CLI/UI
+
+The current product path is:
+
+- Stage 1: data model, JSON storage, CSV import, CLI foundation
+- Stage 2: Swiss tournament workflow
+- later: McMahon, exports, UI, advanced workflows
+
+## Key Design Documents
+
+- Stage 1 broad design:
+  - `docs/superpowers/specs/2026-06-22-weiqi-tournament-design.md`
+- Stage 2 Swiss design:
+  - `docs/superpowers/specs/2026-06-23-stage-2-swiss-design.md`
+- Stage 2 implementation plan:
+  - `docs/superpowers/plans/2026-06-23-stage-2-swiss.md`
+
+## Current Stage 2 Status
+
+### Completed
+
+- Stage 2 planning/spec committed
+- Slice A complete:
+  - typed `Result`, `Game`, and `Round`
+  - `Tournament.rounds` upgraded from raw dicts to typed rounds
+  - stricter round/game/result deserialization
+  - malformed round payload regression coverage
+
+### Completed
+
+- Slice B complete:
+  - pairing/opponent history helpers
+  - colour history helpers
+  - `StandingEntry`
+  - `calculate_standings`
+  - score, wins, losses, byes, opponents, colours, SOS, SOSOS
+  - deterministic standings ordering
+  - regression fix so pending future pairings do not affect standings history
+
+## Recent Verified State
+
+Current verified branch state:
+
+- full suite in the Stage 2 worktree passed: `57 passed`
+
+Useful verification commands:
+
+```powershell
+python -m pytest tests/unit/test_standings.py -q
+python -m pytest
+```
+
+## Important Branch Commits
+
+Recent Stage 2 branch history:
+
+- `0b0214f` Ignore pending games in standings history
+- `24d4bcf` Add standings baseline
+- `e5d69af` Tighten round metadata deserialization
+- `ccc3b88` Harden round state deserialization
+- `554c35f` Add structured round domain models
+- `4c8c9a5` Add Stage 2 Swiss implementation plan
+- `a1da94c` Add Stage 2 Swiss workflow spec
+
+## Expected Next Steps
+
+With Slices A and B complete, the next planned slices are:
+
+1. Slice C: round 1 Swiss pairing
+2. Slice D: result entry
+3. Slice E: later-round Swiss pairing
+4. Slice F: regeneration and explanations
+
+## Local Conventions Learned So Far
+
+- Use `apply_patch` for file edits.
+- Keep changes small and commit-safe.
+- Verify with fresh test runs before claiming completion.
+- The project uses Python 3.12 from:
+  - `C:\Users\user\AppData\Local\Programs\Python\Python312\python.exe`
+- Git worktree cleanup on Windows can be messy due to temp/cache permissions. Avoid unnecessary churn in `.tmp` and `.pytest_cache`.
+
+## Architectural Notes
+
+- JSON `.tgo.json` is the canonical local save format.
+- CSV is for import/export, not full tournament persistence.
+- Pairing and standings logic should stay in `src/pairing/engine/`.
+- CLI should remain thin and orchestration-focused.
+- Tournament state should reject malformed persisted data rather than silently inventing defaults.
+
+## Resume Checklist
+
+If a future session resumes here:
+
+1. open this file
+2. inspect `git log --oneline -8`
+3. run `python -m pytest`
+4. read the Stage 2 plan file
+5. continue from Slice C unless new priorities override the plan
