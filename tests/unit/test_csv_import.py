@@ -39,3 +39,25 @@ def test_import_warns_about_unknown_columns_and_duplicate_names():
     assert len(report.players) == 2
     assert "Unknown columns ignored: extra." in report.warnings
     assert "Duplicate player name imported: Alice." in report.warnings
+
+
+def test_import_rejects_duplicate_normalized_column_headers():
+    csv_text = "name,Name,rank\nAlice,Overwritten,1d\n"
+
+    report = import_players_from_csv_text(csv_text)
+
+    assert not report.valid
+    assert report.players == []
+    assert report.errors == ["Duplicate column header: name."]
+
+
+def test_import_warns_about_blank_header_without_unknown_column_warning():
+    csv_text = "name,,rank,extra\nAlice,ignored,1d,ignored\n"
+
+    report = import_players_from_csv_text(csv_text)
+
+    assert report.valid
+    assert len(report.players) == 1
+    assert "Blank column header ignored." in report.warnings
+    assert "Unknown columns ignored: extra." in report.warnings
+    assert all("Unknown columns ignored: ." != warning for warning in report.warnings)

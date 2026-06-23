@@ -34,10 +34,32 @@ def import_players_from_csv_text(csv_text: str) -> PlayerImportReport:
         report.errors.append("CSV is missing a header row.")
         return report
 
-    normalized_fields = [field.strip().lower() for field in reader.fieldnames]
+    normalized_fields: list[str] = []
+    seen_columns: set[str] = set()
+    duplicate_columns: set[str] = set()
+    has_blank_header = False
+    for field in reader.fieldnames:
+        normalized_field = field.strip().lower()
+        if not normalized_field:
+            has_blank_header = True
+            continue
+        normalized_fields.append(normalized_field)
+        if normalized_field in EXPECTED_COLUMNS:
+            if normalized_field in seen_columns:
+                duplicate_columns.add(normalized_field)
+            seen_columns.add(normalized_field)
+
+    if has_blank_header:
+        report.warnings.append("Blank column header ignored.")
+
     unknown_columns = sorted(set(normalized_fields) - EXPECTED_COLUMNS)
     if unknown_columns:
         report.warnings.append(f"Unknown columns ignored: {', '.join(unknown_columns)}.")
+
+    for duplicate_column in sorted(duplicate_columns):
+        report.errors.append(f"Duplicate column header: {duplicate_column}.")
+    if report.errors:
+        return report
 
     seen_names: set[str] = set()
     pending_players: list[Player] = []
