@@ -30,3 +30,29 @@ def test_cli_import_players_command(tmp_path):
     tournament = load_tournament(tournament_path)
     assert [player.display_name for player in tournament.players] == ["Alice", "Bob"]
     assert [player.seed_number for player in tournament.players] == [1, 2]
+
+
+def test_cli_import_players_missing_tournament_returns_error(tmp_path, capsys):
+    tournament_path = tmp_path / "missing.tgo.json"
+    players_path = tmp_path / "missing.csv"
+
+    exit_code = main(["import-players", str(tournament_path), str(players_path)])
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert captured.err == f"Error: Tournament file not found: {tournament_path}\n"
+
+
+def test_cli_import_players_missing_csv_returns_error(tmp_path, capsys):
+    tournament_path = tmp_path / "example.tgo.json"
+    players_path = tmp_path / "missing.csv"
+
+    assert main(["create", str(tournament_path), "--name", "Example Weiqi Open"]) == 0
+    capsys.readouterr()
+
+    exit_code = main(["import-players", str(tournament_path), str(players_path)])
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert captured.err.startswith("Error:")
+    assert players_path.name in captured.err
