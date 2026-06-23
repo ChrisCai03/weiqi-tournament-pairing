@@ -79,9 +79,36 @@ def test_load_rejects_missing_file(tmp_path):
         (
             {
                 "number": 1,
-                "status": "draft",
+                "games": [],
+            },
+            "Invalid tournament file structure",
+        ),
+        (
+            {
+                "number": 1,
+                "generated_at": "2026-06-23T00:00:00+00:00",
                 "pairing_method": "swiss",
                 "pairing_seed": 1,
+                "games": [],
+            },
+            "Invalid tournament file structure",
+        ),
+        (
+            {
+                "number": 1,
+                "status": "draft",
+                "generated_at": "2026-06-23T00:00:00+00:00",
+                "pairing_seed": 1,
+                "games": [],
+            },
+            "Invalid tournament file structure",
+        ),
+        (
+            {
+                "number": 1,
+                "status": "draft",
+                "generated_at": "2026-06-23T00:00:00+00:00",
+                "pairing_method": "swiss",
                 "games": [],
             },
             "Invalid tournament file structure",
@@ -142,6 +169,18 @@ def test_load_rejects_missing_file(tmp_path):
                         "result": {"status": "pending"},
                     }
                 ],
+            },
+            "Invalid tournament file structure",
+        ),
+        (
+            {
+                "number": 1,
+                "status": "draft",
+                "generated_at": "2026-06-23T00:00:00+00:00",
+                "pairing_method": "swiss",
+                "pairing_seed": 1,
+                "is_regenerated": "false",
+                "games": [],
             },
             "Invalid tournament file structure",
         ),

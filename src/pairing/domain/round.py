@@ -66,13 +66,13 @@ class Round:
         _validate_games(number, games)
         return cls(
             number=number,
-            status=str(data.get("status", "draft")),
+            status=str(data["status"]),
             generated_at=str(data["generated_at"]),
             completed_at=_optional_str(data.get("completed_at")),
-            pairing_method=str(data.get("pairing_method", "swiss")),
-            pairing_seed=int(data.get("pairing_seed", 1)),
+            pairing_method=str(data["pairing_method"]),
+            pairing_seed=int(data["pairing_seed"]),
             games=games,
-            is_regenerated=bool(data.get("is_regenerated", False)),
+            is_regenerated=_parse_bool(data.get("is_regenerated", False)),
             supersedes_round_version=_optional_int(data.get("supersedes_round_version")),
             explanation_summary=[str(item) for item in data.get("explanation_summary", [])],
         )
@@ -88,6 +88,12 @@ def _optional_str(value: object) -> str | None:
     if value is None:
         return None
     return str(value)
+
+
+def _parse_bool(value: object) -> bool:
+    if isinstance(value, bool):
+        return value
+    raise ValueError(f"Invalid boolean value: {value!r}")
 
 
 def _validate_games(number: int, games: list[Game]) -> None:
