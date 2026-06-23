@@ -6,6 +6,7 @@ from uuid import uuid4
 from pairing.domain.audit import AuditLogEntry
 from pairing.domain.config import TournamentConfig
 from pairing.domain.player import Player
+from pairing.domain.round import Round
 
 
 SCHEMA_VERSION = 1
@@ -22,7 +23,7 @@ class Tournament:
     config: TournamentConfig
     players: list[Player] = field(default_factory=list)
     teams: list[dict[str, object]] = field(default_factory=list)
-    rounds: list[dict[str, object]] = field(default_factory=list)
+    rounds: list[Round] = field(default_factory=list)
     manual_overrides: list[dict[str, object]] = field(default_factory=list)
     audit_log: list[AuditLogEntry] = field(default_factory=list)
 
@@ -79,7 +80,7 @@ class Tournament:
             "config": self.config.to_dict(),
             "players": [player.to_dict() for player in self.players],
             "teams": self.teams,
-            "rounds": self.rounds,
+            "rounds": [round_obj.to_dict() for round_obj in self.rounds],
             "manual_overrides": self.manual_overrides,
             "audit_log": [entry.to_dict() for entry in self.audit_log],
         }
@@ -97,7 +98,7 @@ class Tournament:
             config=TournamentConfig.from_dict(dict(data.get("config", {}))),
             players=[Player.from_dict(dict(player)) for player in data.get("players", [])],  # type: ignore[arg-type]
             teams=[dict(team) for team in data.get("teams", [])],  # type: ignore[arg-type]
-            rounds=[dict(round_data) for round_data in data.get("rounds", [])],  # type: ignore[arg-type]
+            rounds=[Round.from_dict(dict(round_data)) for round_data in data.get("rounds", [])],  # type: ignore[arg-type]
             manual_overrides=[dict(item) for item in data.get("manual_overrides", [])],  # type: ignore[arg-type]
             audit_log=[AuditLogEntry.from_dict(dict(entry)) for entry in data.get("audit_log", [])],  # type: ignore[arg-type]
         )
