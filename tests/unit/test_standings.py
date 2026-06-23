@@ -7,7 +7,7 @@ from pairing.engine.history import colour_history_by_player, opponent_ids_by_pla
 from pairing.engine.standings import calculate_standings
 
 
-def test_history_helpers_track_opponents_and_colours_for_paired_games_only() -> None:
+def test_history_helpers_track_opponents_and_colours_for_completed_games_only() -> None:
     tournament = Tournament.create("Example Weiqi Open")
     alice = Player.create("Alice", rank="3d", seed_number=1)
     bob = Player.create("Bob", rank="2d", seed_number=2)
@@ -21,6 +21,7 @@ def test_history_helpers_track_opponents_and_colours_for_paired_games_only() -> 
         white_player_id=bob.id,
         pairing_explanation=[],
     )
+    paired_game.result = Result.completed(result_type="normal", winner_player_id=alice.id)
     bye_game = Game.create(
         round_number=1,
         board_number=2,
@@ -42,6 +43,65 @@ def test_history_helpers_track_opponents_and_colours_for_paired_games_only() -> 
         bob.id: ["white"],
         charlie.id: [],
     }
+
+
+def test_calculate_standings_excludes_pending_future_pairings_from_history_and_tiebreaks() -> None:
+    tournament = Tournament.create("Example Weiqi Open")
+    alice = Player.create("Alice", rank="3d", seed_number=1)
+    bob = Player.create("Bob", rank="2d", seed_number=2)
+    charlie = Player.create("Charlie", rank="1d", seed_number=3)
+    diana = Player.create("Diana", rank="1k", seed_number=4)
+    tournament.players.extend([alice, bob, charlie, diana])
+
+    completed_game = Game.create(
+        round_number=1,
+        board_number=1,
+        black_player_id=alice.id,
+        white_player_id=bob.id,
+        pairing_explanation=[],
+    )
+    completed_game.result = Result.completed(result_type="normal", winner_player_id=alice.id)
+    completed_round = Round.create(
+        number=1,
+        games=[completed_game],
+        pairing_method="swiss",
+        pairing_seed=1,
+    )
+    completed_round.status = "completed"
+
+    pending_game = Game.create(
+        round_number=2,
+        board_number=1,
+        black_player_id=alice.id,
+        white_player_id=charlie.id,
+        pairing_explanation=[],
+    )
+    pending_round = Round.create(
+        number=2,
+        games=[pending_game],
+        pairing_method="swiss",
+        pairing_seed=1,
+    )
+
+    tournament.rounds.extend([completed_round, pending_round])
+
+    standings = calculate_standings(tournament)
+
+    alice_entry = next(entry for entry in standings if entry.player.id == alice.id)
+    bob_entry = next(entry for entry in standings if entry.player.id == bob.id)
+    charlie_entry = next(entry for entry in standings if entry.player.id == charlie.id)
+
+    assert alice_entry.opponents == [bob.id]
+    assert alice_entry.colours == ["black"]
+    assert alice_entry.sos == 0.0
+
+    assert bob_entry.opponents == [alice.id]
+    assert bob_entry.colours == ["white"]
+    assert bob_entry.sos == 1.0
+
+    assert charlie_entry.opponents == []
+    assert charlie_entry.colours == []
+    assert charlie_entry.sos == 0.0
 
 
 def test_calculate_standings_tracks_scores_byes_and_tiebreaks() -> None:
