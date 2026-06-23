@@ -27,6 +27,12 @@ def test_tournament_config_from_dict_requires_tiebreak_order_sequence() -> None:
         TournamentConfig.from_dict({"tiebreak_order": "score"})
 
 
+@pytest.mark.parametrize("round_count", [0, -1])
+def test_tournament_config_from_dict_rejects_non_positive_round_count(round_count: int) -> None:
+    with pytest.raises(ValueError, match="Round count must be positive"):
+        TournamentConfig.from_dict({"round_count": round_count})
+
+
 def test_audit_log_entry_from_dict_coerces_round_number_and_hashes() -> None:
     entry = AuditLogEntry.from_dict(
         {

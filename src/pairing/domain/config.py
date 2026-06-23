@@ -21,6 +21,13 @@ def _parse_tiebreak_order(value: object) -> list[str]:
     return [str(item) for item in value]
 
 
+def _parse_round_count(value: object) -> int:
+    round_count = int(value)
+    if round_count <= 0:
+        raise ValueError("Round count must be positive.")
+    return round_count
+
+
 @dataclass(slots=True)
 class TournamentConfig:
     round_count: int = 5
@@ -44,7 +51,7 @@ class TournamentConfig:
     @classmethod
     def from_dict(cls, data: dict[str, object]) -> "TournamentConfig":
         return cls(
-            round_count=int(data.get("round_count", 5)),
+            round_count=_parse_round_count(data.get("round_count", 5)),
             pairing_method=str(data.get("pairing_method", "swiss")),
             score_win=float(data.get("score_win", 1.0)),
             score_loss=float(data.get("score_loss", 0.0)),
