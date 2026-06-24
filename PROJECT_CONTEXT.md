@@ -55,17 +55,28 @@ The current product path is:
   - score, wins, losses, byes, opponents, colours, SOS, SOSOS
   - deterministic standings ordering
   - regression fix so pending future pairings do not affect standings history
+- Slice C complete:
+  - round 1 Swiss pairing engine
+  - bye, colour, and explanation helper modules
+  - `pair-round` CLI command
+  - round-aware pairing explanations
+  - enforcement of configured `round_count`
+- Slice D complete:
+  - `enter-result` CLI command
+  - tournament helpers for round/game lookup
+  - result recording, round auto-completion, and audit events
+  - domain-level validation for invalid winners and bye-board protection
 
 ## Recent Verified State
 
 Current verified branch state:
 
-- full suite in the Stage 2 worktree passed: `57 passed`
+- full suite in the Stage 2 worktree passed: `69 passed`
 
 Useful verification commands:
 
 ```powershell
-python -m pytest tests/unit/test_standings.py -q
+python -m pytest tests/unit/test_swiss_pairing.py tests/unit/test_cli.py -q
 python -m pytest
 ```
 
@@ -73,6 +84,10 @@ python -m pytest
 
 Recent Stage 2 branch history:
 
+- `4e8cd5a` Harden result entry validation
+- `2c2e2c2` Add result entry workflow
+- `4edad1a` Harden Swiss round metadata and limits
+- `08385ec` Add first round Swiss pairing
 - `0b0214f` Ignore pending games in standings history
 - `24d4bcf` Add standings baseline
 - `e5d69af` Tighten round metadata deserialization
@@ -83,12 +98,10 @@ Recent Stage 2 branch history:
 
 ## Expected Next Steps
 
-With Slices A and B complete, the next planned slices are:
+With Slices A-D complete, the next planned slices are:
 
-1. Slice C: round 1 Swiss pairing
-2. Slice D: result entry
-3. Slice E: later-round Swiss pairing
-4. Slice F: regeneration and explanations
+1. Slice E: later-round Swiss pairing
+2. Slice F: regeneration and explanations
 
 ## Local Conventions Learned So Far
 
@@ -115,4 +128,4 @@ If a future session resumes here:
 2. inspect `git log --oneline -8`
 3. run `python -m pytest`
 4. read the Stage 2 plan file
-5. continue from Slice C unless new priorities override the plan
+5. continue from Slice E unless new priorities override the plan
