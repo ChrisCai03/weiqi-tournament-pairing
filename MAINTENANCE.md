@@ -34,3 +34,22 @@ correction, regeneration, CSV reports, CLI, and local web.
 
 Reserved: draws, forfeits, voids, no-shows, manual overrides, affiliation
 preferences, handicap, SODOS, expanded McMahon bands, PDF, and multi-user use.
+
+## 2026-06-24 — Final Rehabilitation Verification
+
+- Ruff format: 57 files formatted, check passed
+- Ruff lint: passed
+- mypy: 39 production modules, no issues
+- Python compilation: passed
+- pytest: 135 tests passed
+- measured production coverage: 92%
+- installed `pairing --help`: passed
+- installed demo creation: passed
+- HTTP routes `/`, `/players`, `/pairings`, `/results`, `/standings`,
+  `/exports`, and `/display`: all returned 200
+- live pairing mutation: returned 303 and persisted Round 1
+- in-app browser: overview navigation and public display verified
+- handoff UI: `http://127.0.0.1:8124/display`
+
+All twelve success criteria in the repository rehabilitation design are
+satisfied. The branch is ready for review and integration into `main`.
