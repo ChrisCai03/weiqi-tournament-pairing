@@ -1,6 +1,9 @@
 import pytest
 
+from pairing.domain.game import Game
 from pairing.domain.player import Player
+from pairing.domain.result import Result
+from pairing.domain.round import Round
 from pairing.domain.tournament import Tournament
 from pairing.engine.mcmahon import mcmahon_starting_score
 from pairing.engine.round_generation import generate_next_round
@@ -69,3 +72,31 @@ def test_mcmahon_rejects_pending_previous_round() -> None:
 
     with pytest.raises(ValueError, match="Round 1 must be completed first"):
         generate_next_round(tournament)
+
+
+def test_mcmahon_warns_when_repeat_is_unavoidable() -> None:
+    tournament = Tournament.create("McMahon Repeat", round_count=2, format="mcmahon")
+    alice = Player.create("Alice", rank="3d", seed_number=1)
+    bob = Player.create("Bob", rank="1d", seed_number=2)
+    tournament.players.extend([alice, bob])
+    game = Game.create(
+        round_number=1,
+        board_number=1,
+        black_player_id=alice.id,
+        white_player_id=bob.id,
+        pairing_explanation=[],
+    )
+    game.result = Result.completed(result_type="normal", winner_player_id=alice.id)
+    round_one = Round.create(
+        number=1,
+        games=[game],
+        pairing_method="mcmahon",
+        pairing_seed=1,
+    )
+    round_one.status = "completed"
+    tournament.rounds.append(round_one)
+
+    round_two = generate_next_round(tournament)
+
+    assert len(round_two.games) == 1
+    assert any("Warning:" in item and "already met" in item for item in round_two.explanation_summary)

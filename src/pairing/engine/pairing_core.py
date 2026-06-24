@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pairing.engine.history import players_have_met
+from pairing.engine.pairing_result import PairingWarning
 from pairing.engine.standings import StandingEntry
 
 
@@ -24,6 +25,33 @@ def pair_score_groups(
         pairing_cache=pairing_cache,
         group_cache=group_cache,
     )
+
+
+def pair_score_groups_with_fallback(
+    entries: list[StandingEntry],
+    opponent_history: dict[str, list[str]],
+) -> tuple[list[tuple[StandingEntry, StandingEntry]], list[PairingWarning]]:
+    strict_pairings = pair_score_groups(entries, opponent_history)
+    if strict_pairings is not None:
+        return strict_pairings, []
+
+    fallback = _pair_minimum_penalty(entries, opponent_history)
+    if fallback is None:
+        raise ValueError("Unable to generate pairings for the active field.")
+
+    warnings = [
+        PairingWarning(
+            code="repeat_opponent",
+            message=(
+                f"Warning: {left.player.display_name} and {right.player.display_name} "
+                "have already met; repeat pairing was unavoidable."
+            ),
+            player_ids=(left.player.id, right.player.id),
+        )
+        for left, right in fallback
+        if players_have_met(opponent_history, left.player.id, right.player.id)
+    ]
+    return fallback, warnings
 
 
 def group_entries_by_score(entries: list[StandingEntry]) -> list[list[StandingEntry]]:
@@ -133,3 +161,42 @@ def _pair_score_group_recursive(
 
     group_cache[cache_key] = None
     return None
+
+
+def _pair_minimum_penalty(
+    entries: list[StandingEntry],
+    opponent_history: dict[str, list[str]],
+) -> list[tuple[StandingEntry, StandingEntry]] | None:
+    if not entries:
+        return []
+    if len(entries) % 2:
+        return None
+
+    first = entries[0]
+    best: tuple[
+        tuple[int, float, int, tuple[tuple[str, str], ...]],
+        list[tuple[StandingEntry, StandingEntry]],
+    ] | None = None
+    for index in range(1, len(entries)):
+        partner = entries[index]
+        remainder = entries[1:index] + entries[index + 1 :]
+        paired_remainder = _pair_minimum_penalty(remainder, opponent_history)
+        if paired_remainder is None:
+            continue
+        candidate = [(first, partner)] + paired_remainder
+        repeat_count = sum(
+            players_have_met(opponent_history, left.player.id, right.player.id)
+            for left, right in candidate
+        )
+        score_distance = sum(abs(left.score - right.score) for left, right in candidate)
+        rank_distance = sum(
+            abs(left.player.rank_sort_value - right.player.rank_sort_value)
+            for left, right in candidate
+        )
+        signature = tuple(
+            (left.player.id, right.player.id) for left, right in candidate
+        )
+        cost = (repeat_count, score_distance, rank_distance, signature)
+        if best is None or cost < best[0]:
+            best = (cost, candidate)
+    return None if best is None else best[1]

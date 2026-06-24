@@ -118,3 +118,22 @@ def test_service_returns_standings_and_exports_without_mutating_file(tmp_path) -
     ]
     assert "Name,Rank,Country" in players_csv
     assert path.read_bytes() == before
+
+
+def test_service_surfaces_unavoidable_repeat_warning(tmp_path) -> None:
+    path = tmp_path / "event.tgo.json"
+    tournament = Tournament.create("Repeat Service", round_count=2)
+    alice = Player.create("Alice", rank="1d", seed_number=1)
+    bob = Player.create("Bob", rank="1k", seed_number=2)
+    tournament.players.extend([alice, bob])
+    save_tournament(tournament, path)
+    service = TournamentService(path)
+    service.generate_next_round()
+    service.record_result(round_number=1, board_number=1, winner="black")
+
+    outcome = service.generate_next_round(actor="web")
+
+    loaded = load_tournament(path)
+    assert outcome.warnings
+    assert "already met" in outcome.warnings[0]
+    assert loaded.audit_log[-1].details["warnings"] == list(outcome.warnings)

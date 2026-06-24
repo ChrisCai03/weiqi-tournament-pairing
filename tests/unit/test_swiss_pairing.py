@@ -154,6 +154,35 @@ def test_generate_later_round_avoids_repeated_opponents_when_a_legal_alternative
     ]
 
 
+def test_generate_later_round_warns_when_repeat_is_unavoidable() -> None:
+    tournament = Tournament.create("Repeat Pressure", round_count=2)
+    alice = Player.create("Alice", rank="1d", seed_number=1)
+    bob = Player.create("Bob", rank="1k", seed_number=2)
+    tournament.players.extend([alice, bob])
+    tournament.rounds.append(
+        _completed_round(
+            number=1,
+            games=[
+                _completed_game(
+                    round_number=1,
+                    board_number=1,
+                    black_player_id=alice.id,
+                    white_player_id=bob.id,
+                    winner_player_id=alice.id,
+                )
+            ],
+        )
+    )
+
+    round_two = generate_next_round(tournament)
+
+    assert len(round_two.games) == 1
+    assert frozenset(
+        (round_two.games[0].black_player_id, round_two.games[0].white_player_id)
+    ) == frozenset((alice.id, bob.id))
+    assert any("Warning:" in item and "already met" in item for item in round_two.explanation_summary)
+
+
 def test_generate_later_round_assigns_one_bye_to_the_lowest_scoring_eligible_player() -> None:
     tournament = Tournament.create("Example Weiqi Open", round_count=3)
     alice = Player.create("Alice", rank="5d", seed_number=1)

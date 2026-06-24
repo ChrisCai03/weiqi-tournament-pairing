@@ -8,7 +8,8 @@ from pairing.domain.tournament import Tournament
 from pairing.engine.bye import ordered_later_round_bye_candidates, select_bye_player
 from pairing.engine.colours import assign_colours
 from pairing.engine.history import colour_history_by_player, opponent_ids_by_player
-from pairing.engine.pairing_core import pair_score_groups
+from pairing.engine.pairing_core import pair_score_groups, pair_score_groups_with_fallback
+from pairing.engine.pairing_result import PairingWarning
 from pairing.engine.progression import validate_next_round_allowed
 from pairing.engine.standings import StandingEntry, calculate_standings
 from pairing.engine.explanations import bye_explanation, round_pairing_explanation, round_summary
@@ -27,15 +28,20 @@ def generate_next_round(tournament: Tournament) -> Round:
         )
     if round_number == 1:
         games = _generate_first_round(tournament=tournament, active_players=active_players, round_number=round_number)
+        warnings: list[PairingWarning] = []
     else:
-        games = _generate_later_round(tournament=tournament, round_number=round_number)
+        games, warnings = _generate_later_round(
+            tournament=tournament,
+            round_number=round_number,
+        )
 
     return Round.create(
         number=round_number,
         games=games,
         pairing_method="swiss",
         pairing_seed=tournament.config.random_seed,
-        explanation_summary=round_summary(round_number=round_number),
+        explanation_summary=round_summary(round_number=round_number)
+        + [warning.message for warning in warnings],
     )
 
 
@@ -85,13 +91,18 @@ def _generate_first_round(*, tournament: Tournament, active_players: list[Player
     return games
 
 
-def _generate_later_round(*, tournament: Tournament, round_number: int) -> list[Game]:
+def _generate_later_round(
+    *,
+    tournament: Tournament,
+    round_number: int,
+) -> tuple[list[Game], list[PairingWarning]]:
     standings = calculate_standings(tournament)
     active_entries = [entry for entry in standings if entry.player.status == "active"]
     opponent_history = opponent_ids_by_player(tournament)
     colour_history = colour_history_by_player(tournament)
     games: list[Game] = []
     pairings: list[tuple[StandingEntry, StandingEntry]] | None = None
+    warnings: list[PairingWarning] = []
 
     if len(active_entries) % 2 == 1:
         for bye_entry in ordered_later_round_bye_candidates(active_entries):
@@ -115,11 +126,22 @@ def _generate_later_round(*, tournament: Tournament, round_number: int) -> list[
             break
 
         if pairings is None:
-            raise ValueError("Unable to generate Swiss pairings without repeated opponents.")
+            bye_entry = ordered_later_round_bye_candidates(active_entries)[0]
+            remaining_entries = [
+                entry for entry in active_entries if entry.player.id != bye_entry.player.id
+            ]
+            pairings, warnings = pair_score_groups_with_fallback(
+                remaining_entries,
+                opponent_history,
+            )
+            games.append(
+                _bye_game(round_number=round_number, player=bye_entry.player)
+            )
     else:
-        pairings = pair_score_groups(active_entries, opponent_history)
-        if pairings is None:
-            raise ValueError("Unable to generate Swiss pairings without repeated opponents.")
+        pairings, warnings = pair_score_groups_with_fallback(
+            active_entries,
+            opponent_history,
+        )
 
     for board_number, (top_entry, bottom_entry) in enumerate(pairings, start=len(games) + 1):
         black_player_id, white_player_id = assign_colours(
@@ -128,6 +150,12 @@ def _generate_later_round(*, tournament: Tournament, round_number: int) -> list[
             board_number=board_number,
             colour_history=colour_history,
         )
+        warning_messages = [
+            warning.message
+            for warning in warnings
+            if set(warning.player_ids)
+            == {top_entry.player.id, bottom_entry.player.id}
+        ]
         games.append(
             Game.create(
                 round_number=round_number,
@@ -138,12 +166,25 @@ def _generate_later_round(*, tournament: Tournament, round_number: int) -> list[
                     round_number=round_number,
                     top_player=top_entry.player,
                     bottom_player=bottom_entry.player,
-                ),
+                )
+                + warning_messages,
             )
         )
 
     games.sort(key=lambda game: game.board_number)
-    return games
+    return games, warnings
+
+
+def _bye_game(*, round_number: int, player: Player) -> Game:
+    bye_game = Game.create(
+        round_number=round_number,
+        board_number=1,
+        black_player_id=player.id,
+        white_player_id=None,
+        pairing_explanation=bye_explanation(round_number=round_number, player=player),
+    )
+    bye_game.result = Result.completed(result_type="bye", winner_player_id=player.id)
+    return bye_game
 def _sorted_active_players(players: list[Player]) -> list[Player]:
     return sorted(
         (player for player in players if player.status == "active"),

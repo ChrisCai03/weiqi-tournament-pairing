@@ -10,7 +10,8 @@ from pairing.engine.bye import ordered_later_round_bye_candidates
 from pairing.engine.colours import assign_colours
 from pairing.engine.explanations import bye_explanation, round_pairing_explanation, round_summary
 from pairing.engine.history import colour_history_by_player, opponent_ids_by_player
-from pairing.engine.pairing_core import pair_score_groups
+from pairing.engine.pairing_core import pair_score_groups, pair_score_groups_with_fallback
+from pairing.engine.pairing_result import PairingWarning
 from pairing.engine.progression import validate_next_round_allowed
 from pairing.engine.standings import StandingEntry, calculate_standings
 
@@ -32,7 +33,7 @@ def generate_next_round(tournament: Tournament) -> Round:
             f"({tournament.config.round_count})."
         )
 
-    games = _generate_round(
+    games, warnings = _generate_round(
         tournament=tournament,
         round_number=round_number,
     )
@@ -42,11 +43,19 @@ def generate_next_round(tournament: Tournament) -> Round:
         games=games,
         pairing_method="mcmahon",
         pairing_seed=tournament.config.random_seed,
-        explanation_summary=round_summary(round_number=round_number, pairing_method="mcmahon"),
+        explanation_summary=round_summary(
+            round_number=round_number,
+            pairing_method="mcmahon",
+        )
+        + [warning.message for warning in warnings],
     )
 
 
-def _generate_round(*, tournament: Tournament, round_number: int) -> list[Game]:
+def _generate_round(
+    *,
+    tournament: Tournament,
+    round_number: int,
+) -> tuple[list[Game], list[PairingWarning]]:
     standings = calculate_standings(
         tournament,
         starting_score_provider=lambda player: mcmahon_starting_score(player, tournament),
@@ -56,6 +65,7 @@ def _generate_round(*, tournament: Tournament, round_number: int) -> list[Game]:
     colour_history = colour_history_by_player(tournament)
     games: list[Game] = []
     pairings: list[tuple[StandingEntry, StandingEntry]] | None = None
+    warnings: list[PairingWarning] = []
 
     if len(active_entries) % 2 == 1:
         for bye_entry in ordered_later_round_bye_candidates(active_entries):
@@ -73,11 +83,20 @@ def _generate_round(*, tournament: Tournament, round_number: int) -> list[Game]:
             break
 
         if pairings is None:
-            raise ValueError("Unable to generate McMahon pairings without repeated opponents.")
+            bye_entry = ordered_later_round_bye_candidates(active_entries)[0]
+            remaining_entries = [
+                entry for entry in active_entries if entry.player.id != bye_entry.player.id
+            ]
+            pairings, warnings = pair_score_groups_with_fallback(
+                remaining_entries,
+                opponent_history,
+            )
+            games.append(_bye_game(round_number=round_number, player=bye_entry.player))
     else:
-        pairings = pair_score_groups(active_entries, opponent_history)
-        if pairings is None:
-            raise ValueError("Unable to generate McMahon pairings without repeated opponents.")
+        pairings, warnings = pair_score_groups_with_fallback(
+            active_entries,
+            opponent_history,
+        )
 
     for board_number, (top_entry, bottom_entry) in enumerate(pairings, start=len(games) + 1):
         black_player_id, white_player_id = assign_colours(
@@ -86,6 +105,12 @@ def _generate_round(*, tournament: Tournament, round_number: int) -> list[Game]:
             board_number=board_number,
             colour_history=colour_history,
         )
+        warning_messages = [
+            warning.message
+            for warning in warnings
+            if set(warning.player_ids)
+            == {top_entry.player.id, bottom_entry.player.id}
+        ]
         games.append(
             Game.create(
                 round_number=round_number,
@@ -97,12 +122,13 @@ def _generate_round(*, tournament: Tournament, round_number: int) -> list[Game]:
                     top_player=top_entry.player,
                     bottom_player=bottom_entry.player,
                     pairing_method="mcmahon",
-                ),
+                )
+                + warning_messages,
             )
         )
 
     games.sort(key=lambda game: game.board_number)
-    return games
+    return games, warnings
 
 
 def _bye_game(*, round_number: int, player: Player) -> Game:

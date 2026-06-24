@@ -82,6 +82,11 @@ class TournamentService:
                 details={
                     "format": round_obj.pairing_method,
                     "game_count": len(round_obj.games),
+                    "warnings": [
+                        item
+                        for item in round_obj.explanation_summary
+                        if item.startswith("Warning:")
+                    ],
                 },
             )
         )
@@ -89,6 +94,11 @@ class TournamentService:
         return RoundOutcome(
             round_number=round_obj.number,
             game_count=len(round_obj.games),
+            warnings=tuple(
+                item
+                for item in round_obj.explanation_summary
+                if item.startswith("Warning:")
+            ),
         )
 
     def record_result(
