@@ -148,3 +148,18 @@ Stage 3 is complete when a director can:
 ## Implementation Note
 
 The current worktree must stay on a branch that includes the Stage 2 Swiss foundation before coding begins. If the branch is ever recreated from main, Stage 2 needs to be merged or cherry-picked first.
+
+## Implemented MVP Policy Clarification
+
+The implemented Stage 3 baseline is intentionally a simplified McMahon
+variant:
+
+- one configurable ranked bar, defaulting to `1d`
+- players at or above the bar start at `1.0`
+- players below the bar, including unranked players, start at `0.0`
+- current McMahon score is starting score plus game score
+- pairing uses the shared score-group, bye, repeat-opponent, and colour logic
+
+The current implementation does not provide rank-band starting scores,
+separate upper and lower bars, SODOS, or handicap pairing. Those remain future
+features and must not be inferred from the broader original design language.

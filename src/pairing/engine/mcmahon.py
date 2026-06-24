@@ -8,7 +8,13 @@ from pairing.domain.round import Round
 from pairing.domain.tournament import Tournament
 from pairing.engine.bye import ordered_later_round_bye_candidates
 from pairing.engine.colours import assign_colours
-from pairing.engine.explanations import bye_explanation, round_pairing_explanation, round_summary
+from pairing.engine.explanations import (
+    bye_explanation,
+    mcmahon_policy_summary,
+    mcmahon_score_explanation,
+    round_pairing_explanation,
+    round_summary,
+)
 from pairing.engine.history import colour_history_by_player, opponent_ids_by_player
 from pairing.engine.pairing_core import pair_score_groups, pair_score_groups_with_fallback
 from pairing.engine.pairing_result import PairingWarning
@@ -47,6 +53,7 @@ def generate_next_round(tournament: Tournament) -> Round:
             round_number=round_number,
             pairing_method="mcmahon",
         )
+        + [mcmahon_policy_summary(bar_rank=tournament.config.mcmahon_bar_rank)]
         + [warning.message for warning in warnings],
     )
 
@@ -123,6 +130,15 @@ def _generate_round(
                     bottom_player=bottom_entry.player,
                     pairing_method="mcmahon",
                 )
+                + [
+                    mcmahon_score_explanation(
+                        player_one=top_entry.player,
+                        player_two=bottom_entry.player,
+                        player_one_score=top_entry.starting_score,
+                        player_two_score=bottom_entry.starting_score,
+                        bar_rank=tournament.config.mcmahon_bar_rank,
+                    )
+                ]
                 + warning_messages,
             )
         )

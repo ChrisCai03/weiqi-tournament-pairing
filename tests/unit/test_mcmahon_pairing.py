@@ -15,9 +15,13 @@ def test_mcmahon_starting_score_uses_the_bar_rank() -> None:
 
     stronger = Player.create("Strong", rank="3d", seed_number=1)
     weaker = Player.create("Weak", rank="2k", seed_number=2)
+    on_bar = Player.create("On Bar", rank="1d", seed_number=3)
+    unranked = Player.create("Unranked", rank="unranked", seed_number=4)
 
     assert mcmahon_starting_score(stronger, tournament) == 1.0
     assert mcmahon_starting_score(weaker, tournament) == 0.0
+    assert mcmahon_starting_score(on_bar, tournament) == 1.0
+    assert mcmahon_starting_score(unranked, tournament) == 0.0
 
 
 def test_generate_next_round_uses_mcmahon_generator() -> None:
@@ -35,6 +39,11 @@ def test_generate_next_round_uses_mcmahon_generator() -> None:
 
     assert round_obj.pairing_method == "mcmahon"
     assert round_obj.number == 1
+    assert any("bar 1d" in item for item in round_obj.explanation_summary)
+    assert all(
+        any("starting scores" in item for item in game.pairing_explanation)
+        for game in round_obj.games
+    )
 
 
 def test_generate_mcmahon_round_has_stable_bar_pairing_order() -> None:

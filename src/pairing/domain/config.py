@@ -73,7 +73,9 @@ class TournamentConfig:
             AFFILIATION_POLICIES,
             "affiliation policy",
         )
-        parse_rank(self.mcmahon_bar_rank)
+        bar_rank = parse_rank(self.mcmahon_bar_rank)
+        if bar_rank.label == "unranked":
+            raise ValueError("McMahon bar rank must be ranked.")
         if not self.tiebreak_order:
             raise ValueError("tiebreak_order must not be empty")
         for tiebreak in self.tiebreak_order:
