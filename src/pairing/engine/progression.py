@@ -7,9 +7,7 @@ def validate_next_round_allowed(tournament: Tournament) -> None:
     if any(round_obj.status == "stale" for round_obj in tournament.rounds):
         raise ValueError("Tournament has stale rounds that must be regenerated first.")
 
-    active_rounds = [
-        round_obj for round_obj in tournament.rounds if round_obj.status != "stale"
-    ]
+    active_rounds = [round_obj for round_obj in tournament.rounds if round_obj.status != "stale"]
     if not active_rounds:
         return
 

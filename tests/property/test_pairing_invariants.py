@@ -1,11 +1,12 @@
-from hypothesis import given, settings, strategies as st
 from pathlib import Path
 from tempfile import TemporaryDirectory
+
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
 from pairing.domain import Player, Tournament
 from pairing.engine.round_generation import generate_next_round
 from pairing.storage import load_tournament, save_tournament
-
 
 RANKS = ["5d", "3d", "1d", "1k", "5k", "unranked"]
 
@@ -31,9 +32,7 @@ def test_round_one_pairing_invariants(ranks: list[str], format: str) -> None:
         for player_id in (game.black_player_id, game.white_player_id)
         if player_id is not None
     ]
-    bye_count = sum(
-        game.result.result_type == "bye" for game in round_obj.games
-    )
+    bye_count = sum(game.result.result_type == "bye" for game in round_obj.games)
 
     assert sorted(appearances) == sorted(player.id for player in tournament.players)
     assert len(appearances) == len(set(appearances))

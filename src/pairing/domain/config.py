@@ -97,7 +97,9 @@ class TournamentConfig:
             bye_policy=str(data.get("bye_policy", "lowest_score_no_previous_bye")),
             handicap_policy=str(data.get("handicap_policy", "none")),
             affiliation_policy=str(data.get("affiliation_policy", "avoid_when_possible")),
-            tiebreak_order=_parse_tiebreak_order(data.get("tiebreak_order", ["score", "wins", "sos", "sosos"])),
+            tiebreak_order=_parse_tiebreak_order(
+                data.get("tiebreak_order", ["score", "wins", "sos", "sosos"])
+            ),
             random_seed=int(data.get("random_seed", 1)),
         )
         config.validate()

@@ -7,7 +7,6 @@ from pathlib import Path
 
 from pairing.domain.player import Player, RankParseError
 
-
 EXPECTED_COLUMNS = {"name", "rank", "country", "club", "school", "team", "notes"}
 
 
@@ -38,8 +37,8 @@ def import_players_from_csv_text(csv_text: str) -> PlayerImportReport:
     seen_columns: set[str] = set()
     duplicate_columns: set[str] = set()
     has_blank_header = False
-    for field in reader.fieldnames:
-        normalized_field = field.strip().lower()
+    for column_name in reader.fieldnames:
+        normalized_field = column_name.strip().lower()
         if not normalized_field:
             has_blank_header = True
             continue

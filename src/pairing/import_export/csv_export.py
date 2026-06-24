@@ -31,13 +31,27 @@ def players_to_csv(tournament: Tournament) -> str:
 def standings_to_csv(tournament: Tournament) -> str:
     buffer = StringIO()
     writer = csv.writer(buffer)
-    writer.writerow(["Pos", "Player", "Starting Score", "Game Score", "Total Score", "Wins", "Losses", "SOS", "SOSOS"])
+    writer.writerow(
+        [
+            "Pos",
+            "Player",
+            "Starting Score",
+            "Game Score",
+            "Total Score",
+            "Wins",
+            "Losses",
+            "SOS",
+            "SOSOS",
+        ]
+    )
     standings = calculate_standings(
         tournament,
         starting_score_provider=(
-            lambda player: mcmahon_starting_score(player, tournament)
-            if tournament.format == "mcmahon"
-            else 0.0
+            lambda player: (
+                mcmahon_starting_score(player, tournament)
+                if tournament.format == "mcmahon"
+                else 0.0
+            )
         ),
     )
     for index, entry in enumerate(standings, start=1):

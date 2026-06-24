@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 REASONS = {
     200: "OK",
     303: "See Other",

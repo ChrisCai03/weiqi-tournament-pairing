@@ -17,7 +17,9 @@ def build_parser() -> argparse.ArgumentParser:
     create_parser.add_argument("path", help="Output .tgo.json path.")
     create_parser.add_argument("--name", required=True, help="Tournament name.")
     create_parser.add_argument("--rounds", type=int, default=5, help="Number of rounds.")
-    create_parser.add_argument("--format", default="swiss", choices=("swiss", "mcmahon"), help="Tournament format.")
+    create_parser.add_argument(
+        "--format", default="swiss", choices=("swiss", "mcmahon"), help="Tournament format."
+    )
 
     demo_parser = subparsers.add_parser("demo", help="Create a sample tournament file.")
     demo_parser.add_argument("path", help="Output .tgo.json path.")
@@ -26,7 +28,9 @@ def build_parser() -> argparse.ArgumentParser:
     import_parser.add_argument("tournament_path", help="Existing .tgo.json tournament file.")
     import_parser.add_argument("csv_path", help="Player CSV file.")
 
-    pair_round_parser = subparsers.add_parser("pair-round", help="Generate and append the next round.")
+    pair_round_parser = subparsers.add_parser(
+        "pair-round", help="Generate and append the next round."
+    )
     pair_round_parser.add_argument("tournament_path", help="Existing .tgo.json tournament file.")
 
     standings_parser = subparsers.add_parser("standings", help="Print current standings.")
@@ -57,8 +61,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     enter_result_parser = subparsers.add_parser("enter-result", help="Record a game result.")
     enter_result_parser.add_argument("tournament_path", help="Existing .tgo.json tournament file.")
-    enter_result_parser.add_argument("--round", dest="round_number", required=True, type=int, help="Round number.")
-    enter_result_parser.add_argument("--board", dest="board_number", required=True, type=int, help="Board number.")
+    enter_result_parser.add_argument(
+        "--round", dest="round_number", required=True, type=int, help="Round number."
+    )
+    enter_result_parser.add_argument(
+        "--board", dest="board_number", required=True, type=int, help="Board number."
+    )
     enter_result_parser.add_argument(
         "--winner",
         required=True,
@@ -120,20 +128,22 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         if args.command == "import-players":
-            outcome = TournamentService(args.tournament_path).import_players_file(
+            import_outcome = TournamentService(args.tournament_path).import_players_file(
                 args.csv_path,
                 actor="cli",
             )
-            for warning in outcome.warnings:
+            for warning in import_outcome.warnings:
                 print(f"Warning: {warning}", file=sys.stderr)
-            print(f"Imported {outcome.imported_count} players.")
+            print(f"Imported {import_outcome.imported_count} players.")
             return 0
 
         if args.command == "pair-round":
-            outcome = TournamentService(args.tournament_path).generate_next_round(actor="cli")
-            for warning in outcome.warnings:
+            round_outcome = TournamentService(args.tournament_path).generate_next_round(actor="cli")
+            for warning in round_outcome.warnings:
                 print(f"Warning: {warning}", file=sys.stderr)
-            print(f"Paired round {outcome.round_number} with {outcome.game_count} games.")
+            print(
+                f"Paired round {round_outcome.round_number} with {round_outcome.game_count} games."
+            )
             return 0
 
         if args.command == "standings":
@@ -151,15 +161,15 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         if args.command == "regenerate-from":
-            outcome = TournamentService(args.tournament_path).regenerate_from(
+            regeneration_outcome = TournamentService(args.tournament_path).regenerate_from(
                 args.round_number,
                 actor="cli",
             )
-            if outcome is None:
+            if regeneration_outcome is None:
                 print(f"No later rounds to regenerate after round {args.round_number}.")
                 return 0
 
-            print(f"Generated round {outcome.round_number}.")
+            print(f"Generated round {regeneration_outcome.round_number}.")
             return 0
 
         if args.command == "enter-result":

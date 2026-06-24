@@ -18,7 +18,6 @@ from pairing.domain.validation import (
     require_unique,
 )
 
-
 SCHEMA_VERSION = 1
 
 
@@ -151,8 +150,7 @@ class Tournament:
         game = self.get_game(round_number, board_number)
         if game.result.status != "completed":
             raise ValueError(
-                f"Round {round_number} board {board_number} has no completed result "
-                "to correct."
+                f"Round {round_number} board {board_number} has no completed result to correct."
             )
         previous_result = game.result.to_dict()
         winner_player_id = self._validate_normal_winner(game, winner)
@@ -223,7 +221,9 @@ class Tournament:
                     actor=actor,
                     round_number=round_number,
                     details={
-                        "stale_round_numbers": [round_obj.number for round_obj in invalidated_rounds],
+                        "stale_round_numbers": [
+                            round_obj.number for round_obj in invalidated_rounds
+                        ],
                     },
                 )
             )
@@ -334,7 +334,7 @@ class Tournament:
 
     @classmethod
     def from_dict(cls, data: dict[str, object]) -> "Tournament":
-        tournament_data = dict(data["tournament"])  # type: ignore[arg-type]
+        tournament_data = dict(data["tournament"])
         tournament = cls(
             id=str(tournament_data["id"]),
             name=str(tournament_data["name"]),
@@ -343,11 +343,11 @@ class Tournament:
             status=str(tournament_data.get("status", "draft")),
             schema_version=int(data.get("schema_version", SCHEMA_VERSION)),
             config=TournamentConfig.from_dict(dict(data.get("config", {}))),
-            players=[Player.from_dict(dict(player)) for player in data.get("players", [])],  # type: ignore[arg-type]
-            teams=[dict(team) for team in data.get("teams", [])],  # type: ignore[arg-type]
-            rounds=[Round.from_dict(dict(round_data)) for round_data in data.get("rounds", [])],  # type: ignore[arg-type]
-            manual_overrides=[dict(item) for item in data.get("manual_overrides", [])],  # type: ignore[arg-type]
-            audit_log=[AuditLogEntry.from_dict(dict(entry)) for entry in data.get("audit_log", [])],  # type: ignore[arg-type]
+            players=[Player.from_dict(dict(player)) for player in data.get("players", [])],
+            teams=[dict(team) for team in data.get("teams", [])],
+            rounds=[Round.from_dict(dict(round_data)) for round_data in data.get("rounds", [])],
+            manual_overrides=[dict(item) for item in data.get("manual_overrides", [])],
+            audit_log=[AuditLogEntry.from_dict(dict(entry)) for entry in data.get("audit_log", [])],
         )
         tournament.validate()
         return tournament

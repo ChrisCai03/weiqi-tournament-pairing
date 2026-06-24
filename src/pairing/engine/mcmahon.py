@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 from pairing.domain.game import Game
-from pairing.domain.player import Player
-from pairing.domain.player import parse_rank
+from pairing.domain.player import Player, parse_rank
 from pairing.domain.result import Result
 from pairing.domain.round import Round
 from pairing.domain.tournament import Tournament
@@ -83,9 +82,7 @@ def _generate_round(
             if pairings is None:
                 continue
 
-            games.append(
-                _bye_game(round_number=round_number, player=bye_entry.player)
-            )
+            games.append(_bye_game(round_number=round_number, player=bye_entry.player))
             active_entries = remaining_entries
             break
 
@@ -115,8 +112,7 @@ def _generate_round(
         warning_messages = [
             warning.message
             for warning in warnings
-            if set(warning.player_ids)
-            == {top_entry.player.id, bottom_entry.player.id}
+            if set(warning.player_ids) == {top_entry.player.id, bottom_entry.player.id}
         ]
         games.append(
             Game.create(

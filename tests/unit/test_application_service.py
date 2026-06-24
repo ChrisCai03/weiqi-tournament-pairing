@@ -161,9 +161,7 @@ def test_service_requires_explicit_result_correction_and_preserves_previous_resu
     )
 
     loaded = load_tournament(path)
-    correction = next(
-        item for item in loaded.audit_log if item.event_type == "result_corrected"
-    )
+    correction = next(item for item in loaded.audit_log if item.event_type == "result_corrected")
     game = loaded.get_game(1, 1)
     assert outcome.corrected
     assert outcome.invalidated_rounds == (2,)

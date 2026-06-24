@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 from pairing.application import TournamentService
+from pairing.web import views
 from pairing.web.forms import parse_urlencoded_form
 from pairing.web.responses import csv_response, html_response, redirect_response
-from pairing.web import views
-
 
 GET_ROUTES = {
     "/": ("Overview", "overview", views._render_overview_section),
@@ -54,18 +53,18 @@ def dispatch_request(service: TournamentService, environ, start_response):
             return _dispatch_post(service, path, environ, start_response)
         return _dispatch_get(service, path, start_response)
     except (OSError, ValueError) as exc:
-        tournament = service.load() if service.path.exists() else None
+        error_tournament = service.load() if service.path.exists() else None
         return html_response(
             start_response,
             400,
-            views._render_error_page(tournament, str(exc)),
+            views._render_error_page(error_tournament, str(exc)),
         )
     except Exception:
-        tournament = service.load() if service.path.exists() else None
+        error_tournament = service.load() if service.path.exists() else None
         return html_response(
             start_response,
             500,
-            views._render_error_page(tournament, "Unexpected server error."),
+            views._render_error_page(error_tournament, "Unexpected server error."),
         )
 
 

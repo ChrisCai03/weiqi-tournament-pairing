@@ -5,14 +5,15 @@ from pairing.application import TournamentService
 from pairing.cli.main import main
 from pairing.domain.player import Player
 from pairing.domain.tournament import Tournament
-from pairing.storage.json_store import load_tournament
-from pairing.storage.json_store import save_tournament
+from pairing.storage.json_store import load_tournament, save_tournament
 
 
 def test_cli_create_command(tmp_path):
     tournament_path = tmp_path / "example.tgo.json"
 
-    exit_code = main(["create", str(tournament_path), "--name", "Example Weiqi Open", "--rounds", "5"])
+    exit_code = main(
+        ["create", str(tournament_path), "--name", "Example Weiqi Open", "--rounds", "5"]
+    )
 
     assert exit_code == 0
     tournament = load_tournament(tournament_path)
@@ -59,7 +60,9 @@ def test_cli_web_passes_open_browser_flag(tmp_path) -> None:
 def test_cli_create_mcmahon_tournament_and_show_standings(tmp_path, capsys):
     tournament_path = tmp_path / "mcmahon.tgo.json"
 
-    assert main(["create", str(tournament_path), "--name", "McMahon Open", "--format", "mcmahon"]) == 0
+    assert (
+        main(["create", str(tournament_path), "--name", "McMahon Open", "--format", "mcmahon"]) == 0
+    )
 
     tournament = load_tournament(tournament_path)
     tournament.players.extend(
@@ -82,7 +85,9 @@ def test_cli_create_mcmahon_tournament_and_show_standings(tmp_path, capsys):
 def test_cli_create_command_rejects_non_positive_rounds(tmp_path, capsys):
     tournament_path = tmp_path / "example.tgo.json"
 
-    exit_code = main(["create", str(tournament_path), "--name", "Example Weiqi Open", "--rounds", "0"])
+    exit_code = main(
+        ["create", str(tournament_path), "--name", "Example Weiqi Open", "--rounds", "0"]
+    )
 
     captured = capsys.readouterr()
     assert exit_code == 1
@@ -180,11 +185,10 @@ def test_cli_pair_round_creates_first_round(tmp_path, capsys):
     loaded_tournament = load_tournament(tournament_path)
     assert [round_obj.number for round_obj in loaded_tournament.rounds] == [1]
     assert [game.board_number for game in loaded_tournament.rounds[0].games] == [1, 2, 3]
-    assert sum(
-        1
-        for game in loaded_tournament.rounds[0].games
-        if game.result.result_type == "bye"
-    ) == 1
+    assert (
+        sum(1 for game in loaded_tournament.rounds[0].games if game.result.result_type == "bye")
+        == 1
+    )
     assert loaded_tournament.audit_log[-1].event_type == "round_pairings_generated"
     assert loaded_tournament.audit_log[-1].actor == "cli"
 
@@ -223,18 +227,21 @@ def test_cli_pair_round_refuses_to_exceed_configured_round_count(tmp_path, capsy
     )
     save_tournament(tournament, tournament_path)
     assert main(["pair-round", str(tournament_path)]) == 0
-    assert main(
-        [
-            "enter-result",
-            str(tournament_path),
-            "--round",
-            "1",
-            "--board",
-            "1",
-            "--winner",
-            "black",
-        ]
-    ) == 0
+    assert (
+        main(
+            [
+                "enter-result",
+                str(tournament_path),
+                "--round",
+                "1",
+                "--board",
+                "1",
+                "--winner",
+                "black",
+            ]
+        )
+        == 0
+    )
     capsys.readouterr()
 
     exit_code = main(["pair-round", str(tournament_path)])
@@ -258,30 +265,36 @@ def test_cli_regenerate_from_rebuilds_the_next_round_after_result_correction(tmp
     save_tournament(tournament, tournament_path)
 
     assert main(["pair-round", str(tournament_path)]) == 0
-    assert main(
-        [
-            "enter-result",
-            str(tournament_path),
-            "--round",
-            "1",
-            "--board",
-            "1",
-            "--winner",
-            "black",
-        ]
-    ) == 0
-    assert main(
-        [
-            "enter-result",
-            str(tournament_path),
-            "--round",
-            "1",
-            "--board",
-            "2",
-            "--winner",
-            "white",
-        ]
-    ) == 0
+    assert (
+        main(
+            [
+                "enter-result",
+                str(tournament_path),
+                "--round",
+                "1",
+                "--board",
+                "1",
+                "--winner",
+                "black",
+            ]
+        )
+        == 0
+    )
+    assert (
+        main(
+            [
+                "enter-result",
+                str(tournament_path),
+                "--round",
+                "1",
+                "--board",
+                "2",
+                "--winner",
+                "white",
+            ]
+        )
+        == 0
+    )
     capsys.readouterr()
 
     exit_code = main(
@@ -379,7 +392,9 @@ def test_cli_enter_result_rejects_unknown_round_or_board(tmp_path, capsys):
     assert captured.err == "Error: Round 9 not found.\n"
 
 
-def test_cli_enter_result_marks_future_rounds_stale_when_correction_breaks_history(tmp_path, capsys):
+def test_cli_enter_result_marks_future_rounds_stale_when_correction_breaks_history(
+    tmp_path, capsys
+):
     tournament_path = tmp_path / "example.tgo.json"
     tournament = Tournament.create("Example Weiqi Open", round_count=3)
     tournament.players.extend(
@@ -392,30 +407,36 @@ def test_cli_enter_result_marks_future_rounds_stale_when_correction_breaks_histo
     )
     save_tournament(tournament, tournament_path)
     assert main(["pair-round", str(tournament_path)]) == 0
-    assert main(
-        [
-            "enter-result",
-            str(tournament_path),
-            "--round",
-            "1",
-            "--board",
-            "1",
-            "--winner",
-            "black",
-        ]
-    ) == 0
-    assert main(
-        [
-            "enter-result",
-            str(tournament_path),
-            "--round",
-            "1",
-            "--board",
-            "2",
-            "--winner",
-            "black",
-        ]
-    ) == 0
+    assert (
+        main(
+            [
+                "enter-result",
+                str(tournament_path),
+                "--round",
+                "1",
+                "--board",
+                "1",
+                "--winner",
+                "black",
+            ]
+        )
+        == 0
+    )
+    assert (
+        main(
+            [
+                "enter-result",
+                str(tournament_path),
+                "--round",
+                "1",
+                "--board",
+                "2",
+                "--winner",
+                "black",
+            ]
+        )
+        == 0
+    )
     assert main(["pair-round", str(tournament_path)]) == 0
     capsys.readouterr()
 

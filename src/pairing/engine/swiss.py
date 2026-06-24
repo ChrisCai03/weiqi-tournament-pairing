@@ -7,12 +7,12 @@ from pairing.domain.round import Round
 from pairing.domain.tournament import Tournament
 from pairing.engine.bye import ordered_later_round_bye_candidates, select_bye_player
 from pairing.engine.colours import assign_colours
+from pairing.engine.explanations import bye_explanation, round_pairing_explanation, round_summary
 from pairing.engine.history import colour_history_by_player, opponent_ids_by_player
 from pairing.engine.pairing_core import pair_score_groups, pair_score_groups_with_fallback
 from pairing.engine.pairing_result import PairingWarning
 from pairing.engine.progression import validate_next_round_allowed
 from pairing.engine.standings import StandingEntry, calculate_standings
-from pairing.engine.explanations import bye_explanation, round_pairing_explanation, round_summary
 
 
 def generate_next_round(tournament: Tournament) -> Round:
@@ -27,7 +27,9 @@ def generate_next_round(tournament: Tournament) -> Round:
             f"({tournament.config.round_count})."
         )
     if round_number == 1:
-        games = _generate_first_round(tournament=tournament, active_players=active_players, round_number=round_number)
+        games = _generate_first_round(
+            tournament=tournament, active_players=active_players, round_number=round_number
+        )
         warnings: list[PairingWarning] = []
     else:
         games, warnings = _generate_later_round(
@@ -45,7 +47,9 @@ def generate_next_round(tournament: Tournament) -> Round:
     )
 
 
-def _generate_first_round(*, tournament: Tournament, active_players: list[Player], round_number: int) -> list[Game]:
+def _generate_first_round(
+    *, tournament: Tournament, active_players: list[Player], round_number: int
+) -> list[Game]:
     paired_players = list(active_players)
     games: list[Game] = []
 
@@ -119,9 +123,13 @@ def _generate_later_round(
                 board_number=1,
                 black_player_id=bye_entry.player.id,
                 white_player_id=None,
-                pairing_explanation=bye_explanation(round_number=round_number, player=bye_entry.player),
+                pairing_explanation=bye_explanation(
+                    round_number=round_number, player=bye_entry.player
+                ),
             )
-            bye_game.result = Result.completed(result_type="bye", winner_player_id=bye_entry.player.id)
+            bye_game.result = Result.completed(
+                result_type="bye", winner_player_id=bye_entry.player.id
+            )
             games.append(bye_game)
             break
 
@@ -134,9 +142,7 @@ def _generate_later_round(
                 remaining_entries,
                 opponent_history,
             )
-            games.append(
-                _bye_game(round_number=round_number, player=bye_entry.player)
-            )
+            games.append(_bye_game(round_number=round_number, player=bye_entry.player))
     else:
         pairings, warnings = pair_score_groups_with_fallback(
             active_entries,
@@ -153,8 +159,7 @@ def _generate_later_round(
         warning_messages = [
             warning.message
             for warning in warnings
-            if set(warning.player_ids)
-            == {top_entry.player.id, bottom_entry.player.id}
+            if set(warning.player_ids) == {top_entry.player.id, bottom_entry.player.id}
         ]
         games.append(
             Game.create(
@@ -185,6 +190,8 @@ def _bye_game(*, round_number: int, player: Player) -> Game:
     )
     bye_game.result = Result.completed(result_type="bye", winner_player_id=player.id)
     return bye_game
+
+
 def _sorted_active_players(players: list[Player]) -> list[Player]:
     return sorted(
         (player for player in players if player.status == "active"),

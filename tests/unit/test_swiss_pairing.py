@@ -48,8 +48,7 @@ def test_generate_first_round_pairs_top_half_vs_bottom_half_in_sorted_order() ->
     assert round_obj.number == 1
     assert [game.board_number for game in round_obj.games] == [1, 2]
     paired_ids = [
-        frozenset((game.black_player_id, game.white_player_id))
-        for game in round_obj.games
+        frozenset((game.black_player_id, game.white_player_id)) for game in round_obj.games
     ]
     active_players = sorted(
         (player for player in tournament.players if player.status == "active"),
@@ -80,8 +79,7 @@ def test_generate_first_round_has_stable_eight_player_pairing_order() -> None:
     names = {player.id: player.display_name for player in tournament.players}
 
     assert [
-        (names[game.black_player_id], names[game.white_player_id])
-        for game in round_obj.games
+        (names[game.black_player_id], names[game.white_player_id]) for game in round_obj.games
     ] == [
         ("Aya", "Eli"),
         ("Fiona", "Ben"),
@@ -146,8 +144,7 @@ def test_generate_later_round_avoids_repeated_opponents_when_a_legal_alternative
 
     assert [game.board_number for game in round_two.games] == [1, 2]
     assert [
-        frozenset((game.black_player_id, game.white_player_id))
-        for game in round_two.games
+        frozenset((game.black_player_id, game.white_player_id)) for game in round_two.games
     ] == [
         frozenset((alice.id, bob.id)),
         frozenset((cara.id, devin.id)),
@@ -180,7 +177,9 @@ def test_generate_later_round_warns_when_repeat_is_unavoidable() -> None:
     assert frozenset(
         (round_two.games[0].black_player_id, round_two.games[0].white_player_id)
     ) == frozenset((alice.id, bob.id))
-    assert any("Warning:" in item and "already met" in item for item in round_two.explanation_summary)
+    assert any(
+        "Warning:" in item and "already met" in item for item in round_two.explanation_summary
+    )
 
 
 def test_generate_later_round_assigns_one_bye_to_the_lowest_scoring_eligible_player() -> None:
@@ -352,8 +351,7 @@ def test_generate_later_round_orders_boards_by_score_group() -> None:
 
     assert [game.board_number for game in round_two.games] == [1, 2, 3, 4]
     assert [
-        frozenset((game.black_player_id, game.white_player_id))
-        for game in round_two.games
+        frozenset((game.black_player_id, game.white_player_id)) for game in round_two.games
     ] == [
         frozenset((eve.id, frank.id)),
         frozenset((gina.id, hank.id)),
@@ -398,7 +396,11 @@ def test_generate_next_round_uses_actual_round_number_in_metadata_and_explanatio
 
     assert round_obj.number == 2
     assert round_obj.explanation_summary == ["Round 2 Swiss pairing generated."]
-    assert all("Round 2" in explanation for game in round_obj.games for explanation in game.pairing_explanation)
+    assert all(
+        "Round 2" in explanation
+        for game in round_obj.games
+        for explanation in game.pairing_explanation
+    )
 
 
 def test_generate_next_round_refuses_to_pair_beyond_configured_round_count() -> None:
@@ -410,20 +412,20 @@ def test_generate_next_round_refuses_to_pair_beyond_configured_round_count() -> 
         ]
     )
     completed_round = Round.create(
-            number=1,
-            games=[
-                Game.create(
-                    round_number=1,
-                    board_number=1,
-                    black_player_id=tournament.players[0].id,
-                    white_player_id=tournament.players[1].id,
-                    pairing_explanation=["Round 1 Swiss pairing generated."],
-                )
-            ],
-            pairing_method="swiss",
-            pairing_seed=tournament.config.random_seed,
-            explanation_summary=["Round 1 Swiss pairing generated."],
-        )
+        number=1,
+        games=[
+            Game.create(
+                round_number=1,
+                board_number=1,
+                black_player_id=tournament.players[0].id,
+                white_player_id=tournament.players[1].id,
+                pairing_explanation=["Round 1 Swiss pairing generated."],
+            )
+        ],
+        pairing_method="swiss",
+        pairing_seed=tournament.config.random_seed,
+        explanation_summary=["Round 1 Swiss pairing generated."],
+    )
     completed_round.games[0].result = Result.completed(
         result_type="normal",
         winner_player_id=completed_round.games[0].black_player_id,

@@ -15,12 +15,16 @@ def assign_colours(
             return player_one.id, player_two.id
         return player_two.id, player_one.id
 
-    forward_score = _colour_assignment_score(player_one, "black", colour_history) + _colour_assignment_score(
+    forward_score = _colour_assignment_score(
+        player_one, "black", colour_history
+    ) + _colour_assignment_score(
         player_two,
         "white",
         colour_history,
     )
-    reverse_score = _colour_assignment_score(player_one, "white", colour_history) + _colour_assignment_score(
+    reverse_score = _colour_assignment_score(
+        player_one, "white", colour_history
+    ) + _colour_assignment_score(
         player_two,
         "black",
         colour_history,

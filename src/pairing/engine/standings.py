@@ -30,7 +30,9 @@ def calculate_standings(
 ) -> list[StandingEntry]:
     entries = {}
     for player in tournament.players:
-        starting_score = starting_score_provider(player) if starting_score_provider is not None else 0.0
+        starting_score = (
+            starting_score_provider(player) if starting_score_provider is not None else 0.0
+        )
         entries[player.id] = StandingEntry(
             player=player,
             starting_score=starting_score,

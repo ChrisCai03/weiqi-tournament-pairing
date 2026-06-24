@@ -74,7 +74,7 @@ def _render_page(tournament: Tournament, title: str, content: str, *, active_tab
             </div>
             <div class="tabs">{nav}</div>
           </div>
-          <div class="content {'single' if active_tab == 'display' else ''}">
+          <div class="content {"single" if active_tab == "display" else ""}">
             {content}
           </div>
         </div>
@@ -119,7 +119,9 @@ def _render_overview_section(tournament: Tournament) -> str:
 def _render_players_section(tournament: Tournament, warnings: list[str] | None = None) -> str:
     warning_html = ""
     if warnings:
-        warning_html = "<div class='error-box'>" + "<br>".join(escape(item) for item in warnings) + "</div>"
+        warning_html = (
+            "<div class='error-box'>" + "<br>".join(escape(item) for item in warnings) + "</div>"
+        )
     rows = "".join(
         f"<tr><td>{index}</td><td>{escape(player.display_name)}</td><td>{escape(player.rank)}</td><td>{player.seed_number}</td><td>{escape(player.status)}</td></tr>"
         for index, player in enumerate(tournament.players, start=1)
@@ -146,7 +148,11 @@ def _render_players_section(tournament: Tournament, warnings: list[str] | None =
 
 def _render_pairings_section(tournament: Tournament) -> str:
     current_round = _current_round(tournament)
-    rows = _render_round_rows(current_round, tournament) if current_round else "<tr><td colspan='5' class='muted'>No pairings yet</td></tr>"
+    rows = (
+        _render_round_rows(current_round, tournament)
+        if current_round
+        else "<tr><td colspan='5' class='muted'>No pairings yet</td></tr>"
+    )
     regen_form = """
       <form method="post" action="/pairings/regenerate">
         <label class="muted">Regenerate from round</label>
@@ -254,7 +260,7 @@ def _render_public_display(tournament: Tournament) -> str:
           <div class="muted">Round {current_round.number} • {escape(tournament.format.title())}</div>
           <table>
             <thead><tr><th>Board</th><th>Black</th><th>White</th></tr></thead>
-            <tbody>{''.join(_render_display_row(tournament, game) for game in current_round.games)}</tbody>
+            <tbody>{"".join(_render_display_row(tournament, game) for game in current_round.games)}</tbody>
           </table>
         </div>
         """
@@ -278,9 +284,11 @@ def _render_preview_standings(tournament: Tournament) -> str:
     standings = calculate_standings(
         tournament,
         starting_score_provider=(
-            lambda player: mcmahon_starting_score(player, tournament)
-            if tournament.format == "mcmahon"
-            else 0.0
+            lambda player: (
+                mcmahon_starting_score(player, tournament)
+                if tournament.format == "mcmahon"
+                else 0.0
+            )
         ),
     )
     rows = "".join(
@@ -323,4 +331,3 @@ def _render_error_page(tournament: Tournament | None, message: str) -> str:
         f"<div class='card'><h2 class='section-title'>Error</h2><div class='error-box'>{escape(message)}</div></div>",
         active_tab="overview",
     )
-

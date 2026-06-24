@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 from io import BytesIO
-from urllib.parse import urlencode
 from wsgiref.util import setup_testing_defaults
 
-from pairing.domain.player import Player
-from pairing.domain.tournament import Tournament
-from pairing.domain.result import Result
 from pairing.domain.game import Game
+from pairing.domain.player import Player
+from pairing.domain.result import Result
 from pairing.domain.round import Round
+from pairing.domain.tournament import Tournament
 from pairing.engine.swiss import generate_next_round
 from pairing.storage.json_store import load_tournament, save_tournament
 from pairing.web.app import create_web_app
@@ -105,7 +104,9 @@ def test_web_standings_csv_export_contains_headers(tmp_path) -> None:
     tournament.rounds.append(round_one)
     save_tournament(tournament, tournament_path)
 
-    status, headers, body = _call_app(create_web_app(tournament_path), "GET", "/exports/standings.csv")
+    status, headers, body = _call_app(
+        create_web_app(tournament_path), "GET", "/exports/standings.csv"
+    )
 
     assert status.startswith("200")
     assert headers["Content-Type"].startswith("text/csv")

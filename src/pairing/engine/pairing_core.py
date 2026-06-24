@@ -68,7 +68,8 @@ def pair_entries_without_floats(
     entries: list[StandingEntry],
     opponent_history: dict[str, list[str]],
     *,
-    pairing_cache: dict[tuple[str, ...], list[tuple[StandingEntry, StandingEntry]] | None] | None = None,
+    pairing_cache: dict[tuple[str, ...], list[tuple[StandingEntry, StandingEntry]] | None]
+    | None = None,
 ) -> list[tuple[StandingEntry, StandingEntry]] | None:
     cache = pairing_cache if pairing_cache is not None else {}
     cache_key = tuple(entry.player.id for entry in entries)
@@ -122,7 +123,9 @@ def _pair_score_group_recursive(
     current_group = score_groups[group_index]
     available = list(carry) + list(current_group)
 
-    full_pairing = pair_entries_without_floats(available, opponent_history, pairing_cache=pairing_cache)
+    full_pairing = pair_entries_without_floats(
+        available, opponent_history, pairing_cache=pairing_cache
+    )
     if full_pairing is not None:
         rest = _pair_score_group_recursive(
             score_groups,
@@ -141,7 +144,9 @@ def _pair_score_group_recursive(
     for float_index in range(len(available) - 1, -1, -1):
         floated_entry = available[float_index]
         remaining = available[:float_index] + available[float_index + 1 :]
-        pairings = pair_entries_without_floats(remaining, opponent_history, pairing_cache=pairing_cache)
+        pairings = pair_entries_without_floats(
+            remaining, opponent_history, pairing_cache=pairing_cache
+        )
         if pairings is None:
             continue
 
@@ -173,10 +178,13 @@ def _pair_minimum_penalty(
         return None
 
     first = entries[0]
-    best: tuple[
-        tuple[int, float, int, tuple[tuple[str, str], ...]],
-        list[tuple[StandingEntry, StandingEntry]],
-    ] | None = None
+    best: (
+        tuple[
+            tuple[int, float, int, tuple[tuple[str, str], ...]],
+            list[tuple[StandingEntry, StandingEntry]],
+        ]
+        | None
+    ) = None
     for index in range(1, len(entries)):
         partner = entries[index]
         remainder = entries[1:index] + entries[index + 1 :]
@@ -193,9 +201,7 @@ def _pair_minimum_penalty(
             abs(left.player.rank_sort_value - right.player.rank_sort_value)
             for left, right in candidate
         )
-        signature = tuple(
-            (left.player.id, right.player.id) for left, right in candidate
-        )
+        signature = tuple((left.player.id, right.player.id) for left, right in candidate)
         cost = (repeat_count, score_distance, rank_distance, signature)
         if best is None or cost < best[0]:
             best = (cost, candidate)

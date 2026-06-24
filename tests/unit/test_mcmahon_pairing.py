@@ -61,8 +61,7 @@ def test_generate_mcmahon_round_has_stable_bar_pairing_order() -> None:
     names = {player.id: player.display_name for player in tournament.players}
 
     assert [
-        (names[game.black_player_id], names[game.white_player_id])
-        for game in round_obj.games
+        (names[game.black_player_id], names[game.white_player_id]) for game in round_obj.games
     ] == [
         ("Aya", "Ben"),
         ("Dina", "Cheng"),
@@ -108,4 +107,6 @@ def test_mcmahon_warns_when_repeat_is_unavoidable() -> None:
     round_two = generate_next_round(tournament)
 
     assert len(round_two.games) == 1
-    assert any("Warning:" in item and "already met" in item for item in round_two.explanation_summary)
+    assert any(
+        "Warning:" in item and "already met" in item for item in round_two.explanation_summary
+    )

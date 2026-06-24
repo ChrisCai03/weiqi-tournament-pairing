@@ -104,10 +104,7 @@ class TournamentService:
         tournament.audit_log.append(
             AuditLogEntry.create(
                 "round_pairings_generated",
-                (
-                    f"Generated {round_obj.pairing_method} pairings for round "
-                    f"{round_obj.number}."
-                ),
+                (f"Generated {round_obj.pairing_method} pairings for round {round_obj.number}."),
                 actor=actor,
                 round_number=round_obj.number,
                 details={
@@ -126,9 +123,7 @@ class TournamentService:
             round_number=round_obj.number,
             game_count=len(round_obj.games),
             warnings=tuple(
-                item
-                for item in round_obj.explanation_summary
-                if item.startswith("Warning:")
+                item for item in round_obj.explanation_summary if item.startswith("Warning:")
             ),
         )
 
@@ -187,9 +182,7 @@ class TournamentService:
         tournament = load_tournament(self.path)
         removed_rounds = tournament.mark_rounds_stale_after(boundary_round)
         superseded_rounds = [
-            round_obj.to_dict()
-            for round_obj in tournament.rounds
-            if round_obj.status == "stale"
+            round_obj.to_dict() for round_obj in tournament.rounds if round_obj.status == "stale"
         ]
         stale_rounds = tournament.purge_stale_rounds()
         if boundary_round >= tournament.config.round_count:

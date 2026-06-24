@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections.abc import Hashable, Iterable
 
-
 TOURNAMENT_FORMATS = frozenset({"swiss", "mcmahon"})
 TOURNAMENT_STATUSES = frozenset({"draft", "active", "completed"})
 PLAYER_STATUSES = frozenset({"active", "withdrawn"})

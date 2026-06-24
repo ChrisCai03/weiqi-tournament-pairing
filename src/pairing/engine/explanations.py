@@ -18,7 +18,9 @@ def round_pairing_explanation(
     ]
 
 
-def bye_explanation(*, round_number: int, player: Player, pairing_method: str = "swiss") -> list[str]:
+def bye_explanation(
+    *, round_number: int, player: Player, pairing_method: str = "swiss"
+) -> list[str]:
     return [
         f"Round {round_number} {pairing_method.title()} bye assigned to {player.display_name} as the lowest-ranked active player."
     ]

@@ -17,9 +17,9 @@ def test_swiss_file_survives_create_pair_result_and_reload(tmp_path) -> None:
     save_tournament(tournament, path)
 
     assert main(["pair-round", str(path)]) == 0
-    assert main(
-        ["enter-result", str(path), "--round", "1", "--board", "1", "--winner", "black"]
-    ) == 0
+    assert (
+        main(["enter-result", str(path), "--round", "1", "--board", "1", "--winner", "black"]) == 0
+    )
 
     loaded = load_tournament(path)
     assert loaded.rounds[0].games[0].result.status == "completed"
@@ -62,10 +62,7 @@ def test_complete_two_round_swiss_workflow(tmp_path) -> None:
         "completed",
     ]
     assert len(service.standings()) == 4
-    assert sum(
-        event.event_type == "round_pairings_generated"
-        for event in loaded.audit_log
-    ) == 2
+    assert sum(event.event_type == "round_pairings_generated" for event in loaded.audit_log) == 2
 
 
 def test_complete_two_round_mcmahon_workflow(tmp_path) -> None:

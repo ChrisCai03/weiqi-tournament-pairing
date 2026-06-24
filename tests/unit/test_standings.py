@@ -1,9 +1,9 @@
+from pairing.cli.main import main
 from pairing.domain.game import Game
 from pairing.domain.player import Player
 from pairing.domain.result import Result
 from pairing.domain.round import Round
 from pairing.domain.tournament import Tournament
-from pairing.cli.main import main
 from pairing.engine.history import colour_history_by_player, opponent_ids_by_player
 from pairing.engine.standings import calculate_standings
 from pairing.storage.json_store import load_tournament, save_tournament
@@ -32,7 +32,9 @@ def test_history_helpers_track_pairing_commitments() -> None:
         pairing_explanation=[],
     )
     tournament.rounds.append(
-        Round.create(number=1, games=[paired_game, bye_game], pairing_method="swiss", pairing_seed=1)
+        Round.create(
+            number=1, games=[paired_game, bye_game], pairing_method="swiss", pairing_seed=1
+        )
     )
 
     assert opponent_ids_by_player(tournament) == {
@@ -267,18 +269,21 @@ def test_standings_update_after_result_entry(tmp_path) -> None:
     save_tournament(tournament, tournament_path)
 
     assert main(["pair-round", str(tournament_path)]) == 0
-    assert main(
-        [
-            "enter-result",
-            str(tournament_path),
-            "--round",
-            "1",
-            "--board",
-            "1",
-            "--winner",
-            "white",
-        ]
-    ) == 0
+    assert (
+        main(
+            [
+                "enter-result",
+                str(tournament_path),
+                "--round",
+                "1",
+                "--board",
+                "1",
+                "--winner",
+                "white",
+            ]
+        )
+        == 0
+    )
 
     loaded_tournament = load_tournament(tournament_path)
     standings = calculate_standings(loaded_tournament)
@@ -286,7 +291,9 @@ def test_standings_update_after_result_entry(tmp_path) -> None:
     winning_game = loaded_tournament.rounds[0].games[0]
     assert standings[0].player.id == winning_game.white_player_id
     assert standings[0].score == 1.0
-    losing_entry = next(entry for entry in standings if entry.player.id == winning_game.black_player_id)
+    losing_entry = next(
+        entry for entry in standings if entry.player.id == winning_game.black_player_id
+    )
     assert losing_entry.score == 0.0
 
 
@@ -306,7 +313,9 @@ def test_calculate_standings_ignores_stale_rounds() -> None:
         pairing_explanation=[],
     )
     round_one_game.result = Result.completed(result_type="normal", winner_player_id=alice.id)
-    round_one = Round.create(number=1, games=[round_one_game], pairing_method="swiss", pairing_seed=1)
+    round_one = Round.create(
+        number=1, games=[round_one_game], pairing_method="swiss", pairing_seed=1
+    )
     round_one.status = "completed"
 
     stale_game = Game.create(
