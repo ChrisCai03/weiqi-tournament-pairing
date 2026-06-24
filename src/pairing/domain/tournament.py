@@ -87,6 +87,11 @@ class Tournament:
 
     def record_result(self, *, round_number: int, board_number: int, winner: str) -> None:
         game = self.get_game(round_number, board_number)
+        if winner not in {"black", "white"}:
+            raise ValueError("Winner must be 'black' or 'white'.")
+        if game.white_player_id is None or game.result.result_type == "bye":
+            raise ValueError("Cannot record a normal result for a bye board.")
+
         winner_player_id = game.black_player_id if winner == "black" else game.white_player_id
         if winner_player_id is None:
             raise ValueError(

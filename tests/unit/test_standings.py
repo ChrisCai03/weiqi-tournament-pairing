@@ -288,3 +288,62 @@ def test_standings_update_after_result_entry(tmp_path) -> None:
     assert standings[0].score == 1.0
     losing_entry = next(entry for entry in standings if entry.player.id == winning_game.black_player_id)
     assert losing_entry.score == 0.0
+
+
+def test_record_result_rejects_invalid_winner_value() -> None:
+    tournament = Tournament.create("Example Weiqi Open")
+    alice = Player.create("Alice", rank="4d", seed_number=1)
+    bob = Player.create("Bob", rank="3d", seed_number=2)
+    tournament.players.extend([alice, bob])
+    tournament.rounds.append(
+        Round.create(
+            number=1,
+            games=[
+                Game.create(
+                    round_number=1,
+                    board_number=1,
+                    black_player_id=alice.id,
+                    white_player_id=bob.id,
+                    pairing_explanation=[],
+                )
+            ],
+            pairing_method="swiss",
+            pairing_seed=1,
+        )
+    )
+
+    try:
+        tournament.record_result(round_number=1, board_number=1, winner="green")
+    except ValueError as exc:
+        assert str(exc) == "Winner must be 'black' or 'white'."
+    else:
+        raise AssertionError("Expected ValueError for invalid winner.")
+
+
+def test_record_result_rejects_overwriting_bye_board() -> None:
+    tournament = Tournament.create("Example Weiqi Open")
+    eve = Player.create("Eve", rank="2k", seed_number=5)
+    tournament.players.append(eve)
+    bye_game = Game.create(
+        round_number=1,
+        board_number=1,
+        black_player_id=eve.id,
+        white_player_id=None,
+        pairing_explanation=[],
+    )
+    bye_game.result = Result.completed(result_type="bye", winner_player_id=eve.id)
+    tournament.rounds.append(
+        Round.create(
+            number=1,
+            games=[bye_game],
+            pairing_method="swiss",
+            pairing_seed=1,
+        )
+    )
+
+    try:
+        tournament.record_result(round_number=1, board_number=1, winner="black")
+    except ValueError as exc:
+        assert str(exc) == "Cannot record a normal result for a bye board."
+    else:
+        raise AssertionError("Expected ValueError for bye board result entry.")
