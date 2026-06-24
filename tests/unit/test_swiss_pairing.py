@@ -15,6 +15,20 @@ def test_generate_next_round_rejects_empty_active_field() -> None:
         generate_next_round(tournament)
 
 
+def test_generate_next_round_rejects_pending_previous_round() -> None:
+    tournament = Tournament.create("Example Weiqi Open", round_count=2)
+    tournament.players.extend(
+        [
+            Player.create("Alice", rank="4d", seed_number=1),
+            Player.create("Bob", rank="3d", seed_number=2),
+        ]
+    )
+    tournament.rounds.append(generate_next_round(tournament))
+
+    with pytest.raises(ValueError, match="Round 1 must be completed first"):
+        generate_next_round(tournament)
+
+
 def test_generate_first_round_pairs_top_half_vs_bottom_half_in_sorted_order() -> None:
     tournament = Tournament.create("Example Weiqi Open")
     withdrawn = Player.create("Withdrawn", rank="9d", seed_number=99)
@@ -344,6 +358,11 @@ def test_generate_next_round_uses_actual_round_number_in_metadata_and_explanatio
         pairing_seed=tournament.config.random_seed,
         explanation_summary=["Round 1 Swiss pairing generated."],
     )
+    existing_round.games[0].result = Result.completed(
+        result_type="normal",
+        winner_player_id=existing_round.games[0].black_player_id,
+    )
+    existing_round.status = "completed"
     tournament.rounds.append(existing_round)
 
     round_obj = generate_next_round(tournament)
@@ -361,8 +380,7 @@ def test_generate_next_round_refuses_to_pair_beyond_configured_round_count() -> 
             Player.create("Bob", rank="3d", seed_number=2),
         ]
     )
-    tournament.rounds.append(
-        Round.create(
+    completed_round = Round.create(
             number=1,
             games=[
                 Game.create(
@@ -377,7 +395,12 @@ def test_generate_next_round_refuses_to_pair_beyond_configured_round_count() -> 
             pairing_seed=tournament.config.random_seed,
             explanation_summary=["Round 1 Swiss pairing generated."],
         )
+    completed_round.games[0].result = Result.completed(
+        result_type="normal",
+        winner_player_id=completed_round.games[0].black_player_id,
     )
+    completed_round.status = "completed"
+    tournament.rounds.append(completed_round)
 
     with pytest.raises(ValueError, match="configured number of rounds"):
         generate_next_round(tournament)

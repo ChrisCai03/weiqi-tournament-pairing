@@ -9,8 +9,6 @@ def opponent_ids_by_player(tournament: Tournament) -> dict[str, list[str]]:
         if round_obj.status == "stale":
             continue
         for game in round_obj.games:
-            if game.result.status != "completed":
-                continue
             if game.black_player_id is None or game.white_player_id is None:
                 continue
             history.setdefault(game.black_player_id, []).append(game.white_player_id)
@@ -32,8 +30,6 @@ def colour_history_by_player(tournament: Tournament) -> dict[str, list[str]]:
         if round_obj.status == "stale":
             continue
         for game in round_obj.games:
-            if game.result.status != "completed":
-                continue
             if game.black_player_id is None or game.white_player_id is None:
                 continue
             history.setdefault(game.black_player_id, []).append("black")

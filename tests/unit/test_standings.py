@@ -9,7 +9,7 @@ from pairing.engine.standings import calculate_standings
 from pairing.storage.json_store import load_tournament, save_tournament
 
 
-def test_history_helpers_track_opponents_and_colours_for_completed_games_only() -> None:
+def test_history_helpers_track_pairing_commitments() -> None:
     tournament = Tournament.create("Example Weiqi Open")
     alice = Player.create("Alice", rank="3d", seed_number=1)
     bob = Player.create("Bob", rank="2d", seed_number=2)
@@ -47,7 +47,7 @@ def test_history_helpers_track_opponents_and_colours_for_completed_games_only() 
     }
 
 
-def test_calculate_standings_excludes_pending_future_pairings_from_history_and_tiebreaks() -> None:
+def test_calculate_standings_includes_pending_pairings_in_history_but_not_score() -> None:
     tournament = Tournament.create("Example Weiqi Open")
     alice = Player.create("Alice", rank="3d", seed_number=1)
     bob = Player.create("Bob", rank="2d", seed_number=2)
@@ -93,17 +93,17 @@ def test_calculate_standings_excludes_pending_future_pairings_from_history_and_t
     bob_entry = next(entry for entry in standings if entry.player.id == bob.id)
     charlie_entry = next(entry for entry in standings if entry.player.id == charlie.id)
 
-    assert alice_entry.opponents == [bob.id]
-    assert alice_entry.colours == ["black"]
+    assert alice_entry.opponents == [bob.id, charlie.id]
+    assert alice_entry.colours == ["black", "black"]
     assert alice_entry.sos == 0.0
 
     assert bob_entry.opponents == [alice.id]
     assert bob_entry.colours == ["white"]
     assert bob_entry.sos == 1.0
 
-    assert charlie_entry.opponents == []
-    assert charlie_entry.colours == []
-    assert charlie_entry.sos == 0.0
+    assert charlie_entry.opponents == [alice.id]
+    assert charlie_entry.colours == ["white"]
+    assert charlie_entry.sos == 1.0
 
 
 def test_calculate_standings_tracks_scores_byes_and_tiebreaks() -> None:

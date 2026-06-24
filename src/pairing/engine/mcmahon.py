@@ -11,6 +11,7 @@ from pairing.engine.colours import assign_colours
 from pairing.engine.explanations import bye_explanation, round_pairing_explanation, round_summary
 from pairing.engine.history import colour_history_by_player, opponent_ids_by_player
 from pairing.engine.pairing_core import pair_score_groups
+from pairing.engine.progression import validate_next_round_allowed
 from pairing.engine.standings import StandingEntry, calculate_standings
 
 
@@ -20,12 +21,10 @@ def mcmahon_starting_score(player: Player, tournament: Tournament) -> float:
 
 
 def generate_next_round(tournament: Tournament) -> Round:
+    validate_next_round_allowed(tournament)
     active_players = [player for player in tournament.players if player.status == "active"]
     if not active_players:
         raise ValueError("Tournament must have at least one active player.")
-    if any(round_obj.status == "stale" for round_obj in tournament.rounds):
-        raise ValueError("Tournament has stale rounds that must be regenerated first.")
-
     round_number = tournament.next_round_number()
     if round_number > tournament.config.round_count:
         raise ValueError(

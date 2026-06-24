@@ -185,6 +185,18 @@ def test_cli_pair_round_refuses_to_exceed_configured_round_count(tmp_path, capsy
     )
     save_tournament(tournament, tournament_path)
     assert main(["pair-round", str(tournament_path)]) == 0
+    assert main(
+        [
+            "enter-result",
+            str(tournament_path),
+            "--round",
+            "1",
+            "--board",
+            "1",
+            "--winner",
+            "black",
+        ]
+    ) == 0
     capsys.readouterr()
 
     exit_code = main(["pair-round", str(tournament_path)])
@@ -218,6 +230,18 @@ def test_cli_regenerate_from_rebuilds_the_next_round_after_result_correction(tmp
             "1",
             "--winner",
             "black",
+        ]
+    ) == 0
+    assert main(
+        [
+            "enter-result",
+            str(tournament_path),
+            "--round",
+            "1",
+            "--board",
+            "2",
+            "--winner",
+            "white",
         ]
     ) == 0
     capsys.readouterr()
@@ -330,6 +354,30 @@ def test_cli_enter_result_marks_future_rounds_stale_when_correction_breaks_histo
     )
     save_tournament(tournament, tournament_path)
     assert main(["pair-round", str(tournament_path)]) == 0
+    assert main(
+        [
+            "enter-result",
+            str(tournament_path),
+            "--round",
+            "1",
+            "--board",
+            "1",
+            "--winner",
+            "black",
+        ]
+    ) == 0
+    assert main(
+        [
+            "enter-result",
+            str(tournament_path),
+            "--round",
+            "1",
+            "--board",
+            "2",
+            "--winner",
+            "black",
+        ]
+    ) == 0
     assert main(["pair-round", str(tournament_path)]) == 0
     capsys.readouterr()
 

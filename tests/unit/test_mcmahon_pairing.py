@@ -1,3 +1,5 @@
+import pytest
+
 from pairing.domain.player import Player
 from pairing.domain.tournament import Tournament
 from pairing.engine.mcmahon import mcmahon_starting_score
@@ -53,3 +55,17 @@ def test_generate_mcmahon_round_has_stable_bar_pairing_order() -> None:
         ("Aya", "Ben"),
         ("Dina", "Cheng"),
     ]
+
+
+def test_mcmahon_rejects_pending_previous_round() -> None:
+    tournament = Tournament.create("McMahon Open", round_count=2, format="mcmahon")
+    tournament.players.extend(
+        [
+            Player.create("Alice", rank="3d", seed_number=1),
+            Player.create("Bob", rank="1d", seed_number=2),
+        ]
+    )
+    tournament.rounds.append(generate_next_round(tournament))
+
+    with pytest.raises(ValueError, match="Round 1 must be completed first"):
+        generate_next_round(tournament)
