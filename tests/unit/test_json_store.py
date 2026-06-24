@@ -1,4 +1,5 @@
 import json
+import os
 
 import pytest
 
@@ -26,6 +27,37 @@ def test_save_and_load_tournament_round_trip(tmp_path):
     assert loaded.audit_log[0].event_type == "tournament_created"
     assert [player.display_name for player in loaded.players] == ["Alice", "Bob"]
     assert [player.seed_number for player in loaded.players] == [1, 2]
+
+
+def test_save_rejects_invalid_aggregate_without_writing_file(tmp_path) -> None:
+    path = tmp_path / "invalid.tgo.json"
+    tournament = Tournament.create("Invalid Open")
+    tournament.players.append(Player.create("Alice", rank="1d"))
+
+    with pytest.raises(ValueError, match="seed number must be positive"):
+        save_tournament(tournament, path)
+
+    assert not path.exists()
+
+
+def test_failed_atomic_replace_preserves_existing_file(tmp_path, monkeypatch) -> None:
+    path = tmp_path / "event.tgo.json"
+    original = Tournament.create("Original")
+    save_tournament(original, path)
+    original_bytes = path.read_bytes()
+
+    replacement = Tournament.create("Replacement")
+
+    def fail_replace(source, target):
+        raise OSError("simulated replace failure")
+
+    monkeypatch.setattr(os, "replace", fail_replace)
+
+    with pytest.raises(OSError, match="simulated replace failure"):
+        save_tournament(replacement, path)
+
+    assert path.read_bytes() == original_bytes
+    assert not path.with_name(f".{path.name}.tmp").exists()
 
 
 def test_load_rejects_unknown_schema_version(tmp_path):

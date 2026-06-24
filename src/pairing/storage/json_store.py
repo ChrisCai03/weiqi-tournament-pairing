@@ -12,12 +12,20 @@ class TournamentStoreError(RuntimeError):
 
 
 def save_tournament(tournament: Tournament, path: str | Path) -> None:
+    tournament.validate()
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     temp_path = target.with_name(f".{target.name}.tmp")
     payload = json.dumps(tournament.to_dict(), indent=2, sort_keys=True)
-    temp_path.write_text(payload + "\n", encoding="utf-8")
-    os.replace(temp_path, target)
+    try:
+        with temp_path.open("w", encoding="utf-8", newline="\n") as file:
+            file.write(payload + "\n")
+            file.flush()
+            os.fsync(file.fileno())
+        os.replace(temp_path, target)
+    finally:
+        if temp_path.exists():
+            temp_path.unlink()
 
 
 def load_tournament(path: str | Path) -> Tournament:
