@@ -1,12 +1,12 @@
 # Project Context
 
-This file is a lightweight handoff note for future sessions working on the Stage 2 Swiss branch.
+This file is a lightweight handoff note for future sessions working on the Stage 3 McMahon branch.
 
 ## Repository
 
 - Main repo: `C:\Users\user\Documents\Pairing software dev`
-- Active Stage 2 worktree: `C:\Users\user\Documents\Pairing software dev\.worktrees\stage-2-swiss`
-- Stage 2 branch: `codex/stage-2-swiss`
+- Active Stage 3 worktree: `C:\Users\user\Documents\Pairing software dev\.worktrees\stage-3-mcmahon`
+- Stage 3 branch: `codex/stage-3-mcmahon`
 
 ## High-Level Product Direction
 
@@ -23,7 +23,8 @@ The current product path is:
 
 - Stage 1: data model, JSON storage, CSV import, CLI foundation
 - Stage 2: Swiss tournament workflow
-- later: McMahon, exports, UI, advanced workflows
+- Stage 3: McMahon tournament workflow
+- later: exports, UI, advanced workflows
 
 ## Key Design Documents
 
@@ -33,12 +34,17 @@ The current product path is:
   - `docs/superpowers/specs/2026-06-23-stage-2-swiss-design.md`
 - Stage 2 implementation plan:
   - `docs/superpowers/plans/2026-06-23-stage-2-swiss.md`
+- Stage 3 McMahon design:
+  - `docs/superpowers/specs/2026-06-24-stage-3-mcmahon-design.md`
+- Stage 3 implementation plan:
+  - `docs/superpowers/plans/2026-06-24-stage-3-mcmahon.md`
 
-## Current Stage 2 Status
+## Current Stage 3 Status
 
 ### Completed
 
-- Stage 2 planning/spec committed
+- Stage 2 Swiss foundation merged into this worktree
+- Stage 3 planning/spec committed
 - Slice A complete:
   - typed `Result`, `Game`, and `Round`
   - `Tournament.rounds` upgraded from raw dicts to typed rounds
@@ -76,12 +82,15 @@ The current product path is:
   - `regenerate-from` CLI command
   - standings/history skip stale rounds
   - regeneration and stale-round regression coverage
+- Stage 3 branch setup:
+  - worktree now tracks the Stage 2 Swiss codebase baseline
+  - McMahon implementation will start from the shared pairing pipeline
 
 ## Recent Verified State
 
 Current verified branch state:
 
-- full suite in the Stage 2 worktree passed: `77 passed`
+- full suite in the Stage 3 worktree passed after the Stage 2 merge: `77 passed`
 
 Useful verification commands:
 
@@ -92,23 +101,22 @@ python -m pytest
 
 ## Important Branch Commits
 
-Recent Stage 2 branch history:
+Recent branch history:
 
+- `d585780` Add Swiss regeneration and stale round handling
+- `07f85d9` Fix later round Swiss bye fallback
+- `e9b8da8` Add later round Swiss pairing
+- `12c95f4` Add later round Swiss pairing
+- `7c49b4e` Update Stage 2 branch context after slices C and D
 - `4e8cd5a` Harden result entry validation
 - `2c2e2c2` Add result entry workflow
 - `4edad1a` Harden Swiss round metadata and limits
 - `08385ec` Add first round Swiss pairing
 - `0b0214f` Ignore pending games in standings history
-- `24d4bcf` Add standings baseline
-- `e5d69af` Tighten round metadata deserialization
-- `ccc3b88` Harden round state deserialization
-- `554c35f` Add structured round domain models
-- `4c8c9a5` Add Stage 2 Swiss implementation plan
-- `a1da94c` Add Stage 2 Swiss workflow spec
 
 ## Expected Next Steps
 
-With Slices A-F complete, the next planned work shifts out of Swiss core delivery and into the broader Stage 3 and Stage 4 pipeline:
+With the Stage 2 foundation merged and Stage 3 planning written, the next planned work is:
 
 1. McMahon pairing and its score-group rules
 2. import/export hardening for real tournament workflows
@@ -138,4 +146,4 @@ If a future session resumes here:
 1. open this file
 2. inspect `git log --oneline -8`
 3. run `python -m pytest`
-4. continue from the next stage of work unless the user asks for Swiss follow-up
+4. continue with Task 1 from the Stage 3 McMahon implementation plan
