@@ -383,7 +383,7 @@ def test_cli_enter_result_marks_future_rounds_stale_when_correction_breaks_histo
 
     exit_code = main(
         [
-            "enter-result",
+            "correct-result",
             str(tournament_path),
             "--round",
             "1",
@@ -396,7 +396,7 @@ def test_cli_enter_result_marks_future_rounds_stale_when_correction_breaks_histo
 
     captured = capsys.readouterr()
     assert exit_code == 0
-    assert captured.out == "Recorded black win for round 1 board 1.\n"
+    assert captured.out == "Corrected result to black win for round 1 board 1.\n"
 
     loaded_tournament = load_tournament(tournament_path)
     assert loaded_tournament.rounds[1].status == "stale"

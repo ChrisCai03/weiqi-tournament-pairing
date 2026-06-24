@@ -124,6 +124,29 @@ class TournamentService:
             invalidated_rounds=tuple(item.number for item in invalidated_rounds),
         )
 
+    def correct_result(
+        self,
+        *,
+        round_number: int,
+        board_number: int,
+        winner: str,
+        actor: str = "cli",
+    ) -> ResultOutcome:
+        tournament = load_tournament(self.path)
+        invalidated_rounds = tournament.correct_result(
+            round_number=round_number,
+            board_number=board_number,
+            winner=winner,
+            actor=actor,
+        )
+        save_tournament(tournament, self.path)
+        return ResultOutcome(
+            round_number=round_number,
+            board_number=board_number,
+            corrected=True,
+            invalidated_rounds=tuple(item.number for item in invalidated_rounds),
+        )
+
     def regenerate_from(
         self,
         boundary_round: int,
@@ -132,6 +155,11 @@ class TournamentService:
     ) -> RoundOutcome | None:
         tournament = load_tournament(self.path)
         removed_rounds = tournament.mark_rounds_stale_after(boundary_round)
+        superseded_rounds = [
+            round_obj.to_dict()
+            for round_obj in tournament.rounds
+            if round_obj.status == "stale"
+        ]
         stale_rounds = tournament.purge_stale_rounds()
         if boundary_round >= tournament.config.round_count:
             save_tournament(tournament, self.path)
@@ -150,6 +178,7 @@ class TournamentService:
                     "removed_round_numbers": [
                         item.number for item in (removed_rounds or stale_rounds)
                     ],
+                    "superseded_rounds": superseded_rounds,
                 },
             )
         )

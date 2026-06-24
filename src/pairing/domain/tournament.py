@@ -105,25 +105,21 @@ class Tournament:
         actor: str = "cli",
     ) -> list[Round]:
         game = self.get_game(round_number, board_number)
-        if winner not in {"black", "white"}:
-            raise ValueError("Winner must be 'black' or 'white'.")
-        if game.white_player_id is None or game.result.result_type == "bye":
-            raise ValueError("Cannot record a normal result for a bye board.")
-
-        winner_player_id = game.black_player_id if winner == "black" else game.white_player_id
-        if winner_player_id is None:
+        winner_player_id = self._validate_normal_winner(game, winner)
+        if game.result.status == "completed":
             raise ValueError(
-                f"Cannot record {winner} win for round {round_number} board {board_number}."
+                f"Round {round_number} board {board_number} already has a completed "
+                "result; use result correction."
             )
-
-        game.result = Result.completed(result_type="normal", winner_player_id=winner_player_id)
-
-        round_obj = self.get_round(round_number)
-        if all(item.result.status == "completed" for item in round_obj.games):
-            round_obj.status = "completed"
-            round_obj.completed_at = _utc_now_iso()
-
-        invalidated_rounds = self.mark_rounds_stale_after(round_number)
+        game.result = Result.completed(
+            result_type="normal",
+            winner_player_id=winner_player_id,
+            entered_by=actor,
+        )
+        invalidated_rounds = self._finish_result_change(
+            round_number=round_number,
+            actor=actor,
+        )
         self.audit_log.append(
             AuditLogEntry.create(
                 "result_entered",
@@ -137,6 +133,88 @@ class Tournament:
                 },
             )
         )
+        self._append_invalidation_event(
+            invalidated_rounds,
+            round_number=round_number,
+            actor=actor,
+        )
+        return invalidated_rounds
+
+    def correct_result(
+        self,
+        *,
+        round_number: int,
+        board_number: int,
+        winner: str,
+        actor: str = "cli",
+    ) -> list[Round]:
+        game = self.get_game(round_number, board_number)
+        if game.result.status != "completed":
+            raise ValueError(
+                f"Round {round_number} board {board_number} has no completed result "
+                "to correct."
+            )
+        previous_result = game.result.to_dict()
+        winner_player_id = self._validate_normal_winner(game, winner)
+        correction_event = AuditLogEntry.create(
+            "result_corrected",
+            f"Corrected round {round_number} board {board_number} to {winner} win.",
+            actor=actor,
+            round_number=round_number,
+            details={
+                "board_number": board_number,
+                "winner": winner,
+                "winner_player_id": winner_player_id,
+                "previous_result": previous_result,
+            },
+        )
+        game.result = Result.completed(
+            result_type="normal",
+            winner_player_id=winner_player_id,
+            entered_by=actor,
+            correction_of=correction_event.id,
+        )
+        invalidated_rounds = self._finish_result_change(
+            round_number=round_number,
+            actor=actor,
+        )
+        self.audit_log.append(correction_event)
+        self._append_invalidation_event(
+            invalidated_rounds,
+            round_number=round_number,
+            actor=actor,
+        )
+        return invalidated_rounds
+
+    def _validate_normal_winner(self, game, winner: str) -> str:
+        if winner not in {"black", "white"}:
+            raise ValueError("Winner must be 'black' or 'white'.")
+        if game.white_player_id is None or game.result.result_type == "bye":
+            raise ValueError("Cannot record a normal result for a bye board.")
+
+        winner_player_id = game.black_player_id if winner == "black" else game.white_player_id
+        if winner_player_id is None:
+            raise ValueError(
+                f"Cannot record {winner} win for round {game.round_number} "
+                f"board {game.board_number}."
+            )
+        return winner_player_id
+
+    def _finish_result_change(self, *, round_number: int, actor: str) -> list[Round]:
+        round_obj = self.get_round(round_number)
+        if all(item.result.status == "completed" for item in round_obj.games):
+            round_obj.status = "completed"
+            round_obj.completed_at = _utc_now_iso()
+
+        return self.mark_rounds_stale_after(round_number)
+
+    def _append_invalidation_event(
+        self,
+        invalidated_rounds: list[Round],
+        *,
+        round_number: int,
+        actor: str,
+    ) -> None:
         if invalidated_rounds:
             self.audit_log.append(
                 AuditLogEntry.create(
@@ -149,7 +227,6 @@ class Tournament:
                     },
                 )
             )
-        return invalidated_rounds
 
     def mark_rounds_stale_after(self, round_number: int) -> list[Round]:
         stale_rounds = [

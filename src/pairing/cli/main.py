@@ -58,6 +58,35 @@ def build_parser() -> argparse.ArgumentParser:
         help="Winning colour.",
     )
 
+    correct_result_parser = subparsers.add_parser(
+        "correct-result",
+        help="Correct an existing game result and invalidate later rounds.",
+    )
+    correct_result_parser.add_argument(
+        "tournament_path",
+        help="Existing .tgo.json tournament file.",
+    )
+    correct_result_parser.add_argument(
+        "--round",
+        dest="round_number",
+        required=True,
+        type=int,
+        help="Round number.",
+    )
+    correct_result_parser.add_argument(
+        "--board",
+        dest="board_number",
+        required=True,
+        type=int,
+        help="Board number.",
+    )
+    correct_result_parser.add_argument(
+        "--winner",
+        required=True,
+        choices=("black", "white"),
+        help="Correct winning colour.",
+    )
+
     return parser
 
 
@@ -129,6 +158,19 @@ def main(argv: list[str] | None = None) -> int:
             )
             print(
                 f"Recorded {args.winner} win for round {args.round_number} board {args.board_number}."
+            )
+            return 0
+
+        if args.command == "correct-result":
+            TournamentService(args.tournament_path).correct_result(
+                round_number=args.round_number,
+                board_number=args.board_number,
+                winner=args.winner,
+                actor="cli",
+            )
+            print(
+                f"Corrected result to {args.winner} win for round "
+                f"{args.round_number} board {args.board_number}."
             )
             return 0
 

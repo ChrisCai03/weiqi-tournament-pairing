@@ -137,3 +137,59 @@ def test_service_surfaces_unavoidable_repeat_warning(tmp_path) -> None:
     assert outcome.warnings
     assert "already met" in outcome.warnings[0]
     assert loaded.audit_log[-1].details["warnings"] == list(outcome.warnings)
+
+
+def test_service_requires_explicit_result_correction_and_preserves_previous_result(
+    tmp_path,
+) -> None:
+    path = tmp_path / "event.tgo.json"
+    _write_four_player_tournament(path)
+    service = TournamentService(path)
+    service.generate_next_round()
+    service.record_result(round_number=1, board_number=1, winner="black")
+
+    with pytest.raises(ValueError, match="already has a completed result"):
+        service.record_result(round_number=1, board_number=1, winner="white")
+
+    service.record_result(round_number=1, board_number=2, winner="black")
+    service.generate_next_round()
+    outcome = service.correct_result(
+        round_number=1,
+        board_number=1,
+        winner="white",
+        actor="web",
+    )
+
+    loaded = load_tournament(path)
+    correction = next(
+        item for item in loaded.audit_log if item.event_type == "result_corrected"
+    )
+    game = loaded.get_game(1, 1)
+    assert outcome.corrected
+    assert outcome.invalidated_rounds == (2,)
+    assert game.result.correction_of == correction.id
+    assert correction.actor == "web"
+    assert correction.details["previous_result"]["winner_player_id"] == game.black_player_id
+    assert loaded.get_round(2).status == "stale"
+
+
+def test_service_regeneration_audits_superseded_round_snapshots(tmp_path) -> None:
+    path = tmp_path / "event.tgo.json"
+    _write_four_player_tournament(path)
+    service = TournamentService(path)
+    service.generate_next_round()
+    service.record_result(round_number=1, board_number=1, winner="black")
+    service.record_result(round_number=1, board_number=2, winner="black")
+    service.generate_next_round()
+    service.correct_result(round_number=1, board_number=1, winner="white")
+
+    outcome = service.regenerate_from(1, actor="web")
+
+    loaded = load_tournament(path)
+    regeneration = next(
+        item for item in reversed(loaded.audit_log) if item.event_type == "rounds_regenerated"
+    )
+    assert outcome is not None
+    assert [round_obj.number for round_obj in loaded.rounds] == [1, 2]
+    assert regeneration.actor == "web"
+    assert [item["number"] for item in regeneration.details["superseded_rounds"]] == [2]
