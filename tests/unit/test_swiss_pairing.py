@@ -47,6 +47,35 @@ def test_generate_first_round_pairs_top_half_vs_bottom_half_in_sorted_order() ->
     ]
 
 
+def test_generate_first_round_has_stable_eight_player_pairing_order() -> None:
+    tournament = Tournament.create("Characterization Open")
+    tournament.players.extend(
+        [
+            Player.create("Aya", rank="8d", seed_number=1),
+            Player.create("Ben", rank="7d", seed_number=2),
+            Player.create("Cheng", rank="6d", seed_number=3),
+            Player.create("Dina", rank="5d", seed_number=4),
+            Player.create("Eli", rank="4d", seed_number=5),
+            Player.create("Fiona", rank="3d", seed_number=6),
+            Player.create("Gao", rank="2d", seed_number=7),
+            Player.create("Hana", rank="1d", seed_number=8),
+        ]
+    )
+
+    round_obj = generate_next_round(tournament)
+    names = {player.id: player.display_name for player in tournament.players}
+
+    assert [
+        (names[game.black_player_id], names[game.white_player_id])
+        for game in round_obj.games
+    ] == [
+        ("Aya", "Eli"),
+        ("Fiona", "Ben"),
+        ("Cheng", "Gao"),
+        ("Hana", "Dina"),
+    ]
+
+
 def test_generate_first_round_assigns_bye_to_lowest_ranked_active_player() -> None:
     tournament = Tournament.create("Example Weiqi Open")
     tournament.players.extend(

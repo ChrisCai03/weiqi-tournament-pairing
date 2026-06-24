@@ -10,7 +10,7 @@ from pairing.domain.result import Result
 from pairing.domain.game import Game
 from pairing.domain.round import Round
 from pairing.engine.swiss import generate_next_round
-from pairing.storage.json_store import save_tournament
+from pairing.storage.json_store import load_tournament, save_tournament
 from pairing.web.app import create_web_app
 
 
@@ -57,8 +57,9 @@ def test_web_pairings_post_generates_round_and_redirects(tmp_path) -> None:
     assert status.startswith("303")
     assert headers["Location"] == "/pairings"
 
-    saved = Tournament.from_dict(Tournament.create("Example Weiqi Open").to_dict())
-    assert tournament_path.exists()
+    saved = load_tournament(tournament_path)
+    assert [round_obj.number for round_obj in saved.rounds] == [1]
+    assert saved.rounds[0].pairing_method == "swiss"
 
 
 def test_web_public_display_renders_latest_pairing(tmp_path) -> None:
