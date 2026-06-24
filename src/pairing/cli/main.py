@@ -5,7 +5,9 @@ import sys
 from pathlib import Path
 
 from pairing.domain.tournament import Tournament
-from pairing.engine.swiss import generate_next_round
+from pairing.engine.mcmahon import mcmahon_starting_score
+from pairing.engine.round_generation import generate_next_round
+from pairing.engine.standings import calculate_standings
 from pairing.import_export.csv_import import import_players_from_csv
 from pairing.storage import TournamentStoreError, load_tournament, save_tournament
 
@@ -18,6 +20,7 @@ def build_parser() -> argparse.ArgumentParser:
     create_parser.add_argument("path", help="Output .tgo.json path.")
     create_parser.add_argument("--name", required=True, help="Tournament name.")
     create_parser.add_argument("--rounds", type=int, default=5, help="Number of rounds.")
+    create_parser.add_argument("--format", default="swiss", choices=("swiss", "mcmahon"), help="Tournament format.")
 
     import_parser = subparsers.add_parser("import-players", help="Import players from CSV.")
     import_parser.add_argument("tournament_path", help="Existing .tgo.json tournament file.")
@@ -25,6 +28,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     pair_round_parser = subparsers.add_parser("pair-round", help="Generate and append the next round.")
     pair_round_parser.add_argument("tournament_path", help="Existing .tgo.json tournament file.")
+
+    standings_parser = subparsers.add_parser("standings", help="Print current standings.")
+    standings_parser.add_argument("tournament_path", help="Existing .tgo.json tournament file.")
 
     regenerate_parser = subparsers.add_parser(
         "regenerate-from",
@@ -59,7 +65,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         if args.command == "create":
-            tournament = Tournament.create(args.name, round_count=args.rounds)
+            tournament = Tournament.create(args.name, round_count=args.rounds, format=args.format)
             save_tournament(tournament, Path(args.path))
             print(f"Created tournament: {args.path}")
             return 0
@@ -84,6 +90,19 @@ def main(argv: list[str] | None = None) -> int:
             tournament.rounds.append(round_obj)
             save_tournament(tournament, Path(args.tournament_path))
             print(f"Paired round {round_obj.number} with {len(round_obj.games)} games.")
+            return 0
+
+        if args.command == "standings":
+            tournament = load_tournament(Path(args.tournament_path))
+            standings = _calculate_display_standings(tournament)
+            print(f"Standings for {tournament.name} ({tournament.format})")
+            print("Pos\tPlayer\tStart\tGame\tTotal\tW\tL\tSOS\tSOSOS")
+            for index, entry in enumerate(standings, start=1):
+                print(
+                    f"{index}\t{entry.player.display_name}\t"
+                    f"{entry.starting_score:.1f}\t{entry.game_score:.1f}\t{entry.score:.1f}\t"
+                    f"{entry.wins}\t{entry.losses}\t{entry.sos:.1f}\t{entry.sosos:.1f}"
+                )
             return 0
 
         if args.command == "regenerate-from":
@@ -124,6 +143,15 @@ def main(argv: list[str] | None = None) -> int:
 
     parser.error(f"Unknown command: {args.command}")
     return 2
+
+
+def _calculate_display_standings(tournament: Tournament):
+    if tournament.format == "mcmahon":
+        return calculate_standings(
+            tournament,
+            starting_score_provider=lambda player: mcmahon_starting_score(player, tournament),
+        )
+    return calculate_standings(tournament)
 
 
 if __name__ == "__main__":

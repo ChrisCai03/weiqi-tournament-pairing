@@ -18,6 +18,29 @@ def test_cli_create_command(tmp_path):
     assert tournament.config.round_count == 5
 
 
+def test_cli_create_mcmahon_tournament_and_show_standings(tmp_path, capsys):
+    tournament_path = tmp_path / "mcmahon.tgo.json"
+
+    assert main(["create", str(tournament_path), "--name", "McMahon Open", "--format", "mcmahon"]) == 0
+
+    tournament = load_tournament(tournament_path)
+    tournament.players.extend(
+        [
+            Player.create("Alice", rank="4d", seed_number=1),
+            Player.create("Bob", rank="3k", seed_number=2),
+        ]
+    )
+    save_tournament(tournament, tournament_path)
+
+    exit_code = main(["standings", str(tournament_path)])
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "McMahon Open" in captured.out
+    assert "Start" in captured.out
+    assert "Game" in captured.out
+
+
 def test_cli_create_command_rejects_non_positive_rounds(tmp_path, capsys):
     tournament_path = tmp_path / "example.tgo.json"
 
@@ -124,6 +147,29 @@ def test_cli_pair_round_creates_first_round(tmp_path, capsys):
         for game in loaded_tournament.rounds[0].games
         if game.result.result_type == "bye"
     ) == 1
+
+
+def test_cli_pair_round_uses_mcmahon_format(tmp_path, capsys):
+    tournament_path = tmp_path / "mcmahon.tgo.json"
+    tournament = Tournament.create("McMahon Open", format="mcmahon")
+    tournament.players.extend(
+        [
+            Player.create("Alice", rank="4d", seed_number=1),
+            Player.create("Bob", rank="3d", seed_number=2),
+            Player.create("Charlie", rank="1d", seed_number=3),
+            Player.create("Diana", rank="1k", seed_number=4),
+        ]
+    )
+    save_tournament(tournament, tournament_path)
+
+    exit_code = main(["pair-round", str(tournament_path)])
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "Paired round 1 with 2 games." in captured.out
+
+    loaded_tournament = load_tournament(tournament_path)
+    assert loaded_tournament.rounds[0].pairing_method == "mcmahon"
 
 
 def test_cli_pair_round_refuses_to_exceed_configured_round_count(tmp_path, capsys):
