@@ -146,6 +146,52 @@ def test_cli_pair_round_refuses_to_exceed_configured_round_count(tmp_path, capsy
     assert captured.err == "Error: Cannot pair round 2 beyond configured number of rounds (1).\n"
 
 
+def test_cli_regenerate_from_rebuilds_the_next_round_after_result_correction(tmp_path, capsys):
+    tournament_path = tmp_path / "example.tgo.json"
+    tournament = Tournament.create("Example Weiqi Open", round_count=3)
+    tournament.players.extend(
+        [
+            Player.create("Alice", rank="4d", seed_number=1),
+            Player.create("Bob", rank="3d", seed_number=2),
+            Player.create("Charlie", rank="1d", seed_number=3),
+            Player.create("Diana", rank="1k", seed_number=4),
+        ]
+    )
+    save_tournament(tournament, tournament_path)
+
+    assert main(["pair-round", str(tournament_path)]) == 0
+    assert main(
+        [
+            "enter-result",
+            str(tournament_path),
+            "--round",
+            "1",
+            "--board",
+            "1",
+            "--winner",
+            "black",
+        ]
+    ) == 0
+    capsys.readouterr()
+
+    exit_code = main(
+        [
+            "regenerate-from",
+            str(tournament_path),
+            "--round",
+            "1",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert captured.out == "Generated round 2.\n"
+
+    loaded_tournament = load_tournament(tournament_path)
+    assert [round_obj.number for round_obj in loaded_tournament.rounds] == [1, 2]
+    assert all(round_obj.status != "stale" for round_obj in loaded_tournament.rounds)
+
+
 def test_cli_enter_result_records_black_win_and_completes_round(tmp_path, capsys):
     tournament_path = tmp_path / "example.tgo.json"
     tournament = Tournament.create("Example Weiqi Open")
@@ -221,3 +267,41 @@ def test_cli_enter_result_rejects_unknown_round_or_board(tmp_path, capsys):
     captured = capsys.readouterr()
     assert exit_code == 1
     assert captured.err == "Error: Round 9 not found.\n"
+
+
+def test_cli_enter_result_marks_future_rounds_stale_when_correction_breaks_history(tmp_path, capsys):
+    tournament_path = tmp_path / "example.tgo.json"
+    tournament = Tournament.create("Example Weiqi Open", round_count=3)
+    tournament.players.extend(
+        [
+            Player.create("Alice", rank="4d", seed_number=1),
+            Player.create("Bob", rank="3d", seed_number=2),
+            Player.create("Charlie", rank="1d", seed_number=3),
+            Player.create("Diana", rank="1k", seed_number=4),
+        ]
+    )
+    save_tournament(tournament, tournament_path)
+    assert main(["pair-round", str(tournament_path)]) == 0
+    assert main(["pair-round", str(tournament_path)]) == 0
+    capsys.readouterr()
+
+    exit_code = main(
+        [
+            "enter-result",
+            str(tournament_path),
+            "--round",
+            "1",
+            "--board",
+            "1",
+            "--winner",
+            "black",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert captured.out == "Recorded black win for round 1 board 1.\n"
+
+    loaded_tournament = load_tournament(tournament_path)
+    assert loaded_tournament.rounds[1].status == "stale"
+    assert loaded_tournament.audit_log[-1].event_type == "future_rounds_invalidated"

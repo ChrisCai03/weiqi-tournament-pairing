@@ -354,6 +354,35 @@ def test_generate_next_round_refuses_to_pair_beyond_configured_round_count() -> 
         generate_next_round(tournament)
 
 
+def test_generate_next_round_refuses_when_stale_rounds_are_present() -> None:
+    tournament = Tournament.create("Example Weiqi Open", round_count=3)
+    tournament.players.extend(
+        [
+            Player.create("Alice", rank="4d", seed_number=1),
+            Player.create("Bob", rank="3d", seed_number=2),
+        ]
+    )
+    stale_round = Round.create(
+        number=1,
+        games=[
+            Game.create(
+                round_number=1,
+                board_number=1,
+                black_player_id=tournament.players[0].id,
+                white_player_id=tournament.players[1].id,
+                pairing_explanation=[],
+            )
+        ],
+        pairing_method="swiss",
+        pairing_seed=tournament.config.random_seed,
+    )
+    stale_round.status = "stale"
+    tournament.rounds.append(stale_round)
+
+    with pytest.raises(ValueError, match="stale rounds that must be regenerated first"):
+        generate_next_round(tournament)
+
+
 def _completed_game(
     *,
     round_number: int,

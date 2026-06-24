@@ -30,6 +30,8 @@ def calculate_standings(tournament: Tournament) -> list[StandingEntry]:
         entry.colours.extend(colour_history.get(player_id, []))
 
     for round_obj in tournament.rounds:
+        if round_obj.status == "stale":
+            continue
         for game in round_obj.games:
             result = game.result
             if result.status != "completed":

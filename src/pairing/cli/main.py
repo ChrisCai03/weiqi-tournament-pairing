@@ -26,6 +26,19 @@ def build_parser() -> argparse.ArgumentParser:
     pair_round_parser = subparsers.add_parser("pair-round", help="Generate and append the next round.")
     pair_round_parser.add_argument("tournament_path", help="Existing .tgo.json tournament file.")
 
+    regenerate_parser = subparsers.add_parser(
+        "regenerate-from",
+        help="Remove later rounds and rebuild the next round from a boundary.",
+    )
+    regenerate_parser.add_argument("tournament_path", help="Existing .tgo.json tournament file.")
+    regenerate_parser.add_argument(
+        "--round",
+        dest="round_number",
+        required=True,
+        type=int,
+        help="Round number to keep as the regeneration boundary.",
+    )
+
     enter_result_parser = subparsers.add_parser("enter-result", help="Record a game result.")
     enter_result_parser.add_argument("tournament_path", help="Existing .tgo.json tournament file.")
     enter_result_parser.add_argument("--round", dest="round_number", required=True, type=int, help="Round number.")
@@ -71,6 +84,26 @@ def main(argv: list[str] | None = None) -> int:
             tournament.rounds.append(round_obj)
             save_tournament(tournament, Path(args.tournament_path))
             print(f"Paired round {round_obj.number} with {len(round_obj.games)} games.")
+            return 0
+
+        if args.command == "regenerate-from":
+            tournament = load_tournament(Path(args.tournament_path))
+            removed_rounds = tournament.mark_rounds_stale_after(args.round_number)
+            stale_rounds = tournament.purge_stale_rounds()
+            if args.round_number >= tournament.config.round_count:
+                save_tournament(tournament, Path(args.tournament_path))
+                print(f"No later rounds to regenerate after round {args.round_number}.")
+                return 0
+
+            round_obj = generate_next_round(tournament)
+            tournament.rounds.append(round_obj)
+            save_tournament(tournament, Path(args.tournament_path))
+            if removed_rounds or stale_rounds:
+                print(
+                    f"Regenerated round {round_obj.number} after removing {len(removed_rounds or stale_rounds)} later rounds."
+                )
+            else:
+                print(f"Generated round {round_obj.number}.")
             return 0
 
         if args.command == "enter-result":

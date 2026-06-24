@@ -105,6 +105,7 @@ class Tournament:
             round_obj.status = "completed"
             round_obj.completed_at = _utc_now_iso()
 
+        invalidated_rounds = self.mark_rounds_stale_after(round_number)
         self.audit_log.append(
             AuditLogEntry.create(
                 "result_entered",
@@ -117,6 +118,44 @@ class Tournament:
                 },
             )
         )
+        if invalidated_rounds:
+            self.audit_log.append(
+                AuditLogEntry.create(
+                    "future_rounds_invalidated",
+                    f"Marked {len(invalidated_rounds)} later rounds stale after round {round_number}.",
+                    round_number=round_number,
+                    details={
+                        "stale_round_numbers": [round_obj.number for round_obj in invalidated_rounds],
+                    },
+                )
+            )
+
+    def mark_rounds_stale_after(self, round_number: int) -> list[Round]:
+        stale_rounds = [
+            round_obj
+            for round_obj in self.rounds
+            if round_obj.number > round_number and round_obj.status != "stale"
+        ]
+        for round_obj in stale_rounds:
+            round_obj.status = "stale"
+        return stale_rounds
+
+    def purge_stale_rounds(self) -> list[Round]:
+        stale_rounds = [round_obj for round_obj in self.rounds if round_obj.status == "stale"]
+        if not stale_rounds:
+            return []
+
+        self.rounds = [round_obj for round_obj in self.rounds if round_obj.status != "stale"]
+        self.audit_log.append(
+            AuditLogEntry.create(
+                "stale_rounds_purged",
+                f"Purged {len(stale_rounds)} stale rounds.",
+                details={
+                    "purged_round_numbers": [round_obj.number for round_obj in stale_rounds],
+                },
+            )
+        )
+        return stale_rounds
 
     def to_dict(self) -> dict[str, object]:
         return {

@@ -66,12 +66,22 @@ The current product path is:
   - tournament helpers for round/game lookup
   - result recording, round auto-completion, and audit events
   - domain-level validation for invalid winners and bye-board protection
+- Slice E complete:
+  - later-round Swiss pairing
+  - score-group floaters and repeat-opponent avoidance
+  - bye selection for later rounds
+  - round-aware colour assignment and explanations
+- Slice F complete:
+  - stale-round invalidation when an earlier result changes
+  - `regenerate-from` CLI command
+  - standings/history skip stale rounds
+  - regeneration and stale-round regression coverage
 
 ## Recent Verified State
 
 Current verified branch state:
 
-- full suite in the Stage 2 worktree passed: `69 passed`
+- full suite in the Stage 2 worktree passed: `77 passed`
 
 Useful verification commands:
 
@@ -98,10 +108,11 @@ Recent Stage 2 branch history:
 
 ## Expected Next Steps
 
-With Slices A-D complete, the next planned slices are:
+With Slices A-F complete, the next planned work shifts out of Swiss core delivery and into the broader Stage 3 and Stage 4 pipeline:
 
-1. Slice E: later-round Swiss pairing
-2. Slice F: regeneration and explanations
+1. McMahon pairing and its score-group rules
+2. import/export hardening for real tournament workflows
+3. local-first UI work once the core engine stops moving
 
 ## Local Conventions Learned So Far
 
@@ -127,5 +138,4 @@ If a future session resumes here:
 1. open this file
 2. inspect `git log --oneline -8`
 3. run `python -m pytest`
-4. read the Stage 2 plan file
-5. continue from Slice E unless new priorities override the plan
+4. continue from the next stage of work unless the user asks for Swiss follow-up

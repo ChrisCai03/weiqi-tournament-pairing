@@ -290,6 +290,47 @@ def test_standings_update_after_result_entry(tmp_path) -> None:
     assert losing_entry.score == 0.0
 
 
+def test_calculate_standings_ignores_stale_rounds() -> None:
+    tournament = Tournament.create("Example Weiqi Open")
+    alice = Player.create("Alice", rank="4d", seed_number=1)
+    bob = Player.create("Bob", rank="3d", seed_number=2)
+    charlie = Player.create("Charlie", rank="1d", seed_number=3)
+    diana = Player.create("Diana", rank="1k", seed_number=4)
+    tournament.players.extend([alice, bob, charlie, diana])
+
+    round_one_game = Game.create(
+        round_number=1,
+        board_number=1,
+        black_player_id=alice.id,
+        white_player_id=bob.id,
+        pairing_explanation=[],
+    )
+    round_one_game.result = Result.completed(result_type="normal", winner_player_id=alice.id)
+    round_one = Round.create(number=1, games=[round_one_game], pairing_method="swiss", pairing_seed=1)
+    round_one.status = "completed"
+
+    stale_game = Game.create(
+        round_number=2,
+        board_number=1,
+        black_player_id=charlie.id,
+        white_player_id=diana.id,
+        pairing_explanation=[],
+    )
+    stale_game.result = Result.completed(result_type="normal", winner_player_id=charlie.id)
+    stale_round = Round.create(number=2, games=[stale_game], pairing_method="swiss", pairing_seed=1)
+    stale_round.status = "stale"
+
+    tournament.rounds.extend([round_one, stale_round])
+
+    standings = calculate_standings(tournament)
+
+    alice_entry = next(entry for entry in standings if entry.player.id == alice.id)
+    charlie_entry = next(entry for entry in standings if entry.player.id == charlie.id)
+
+    assert alice_entry.score == 1.0
+    assert charlie_entry.score == 0.0
+
+
 def test_record_result_rejects_invalid_winner_value() -> None:
     tournament = Tournament.create("Example Weiqi Open")
     alice = Player.create("Alice", rank="4d", seed_number=1)

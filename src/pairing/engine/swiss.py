@@ -16,6 +16,8 @@ def generate_next_round(tournament: Tournament) -> Round:
     active_players = _sorted_active_players(tournament.players)
     if not active_players:
         raise ValueError("Tournament must have at least one active player.")
+    if any(round_obj.status == "stale" for round_obj in tournament.rounds):
+        raise ValueError("Tournament has stale rounds that must be regenerated first.")
 
     round_number = tournament.next_round_number()
     if round_number > tournament.config.round_count:

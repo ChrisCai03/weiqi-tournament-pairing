@@ -6,6 +6,8 @@ from pairing.domain.tournament import Tournament
 def opponent_ids_by_player(tournament: Tournament) -> dict[str, list[str]]:
     history: dict[str, list[str]] = {player.id: [] for player in tournament.players}
     for round_obj in tournament.rounds:
+        if round_obj.status == "stale":
+            continue
         for game in round_obj.games:
             if game.result.status != "completed":
                 continue
@@ -27,6 +29,8 @@ def players_have_met(
 def colour_history_by_player(tournament: Tournament) -> dict[str, list[str]]:
     history: dict[str, list[str]] = {player.id: [] for player in tournament.players}
     for round_obj in tournament.rounds:
+        if round_obj.status == "stale":
+            continue
         for game in round_obj.games:
             if game.result.status != "completed":
                 continue
