@@ -26,6 +26,17 @@ def build_parser() -> argparse.ArgumentParser:
     pair_round_parser = subparsers.add_parser("pair-round", help="Generate and append the next round.")
     pair_round_parser.add_argument("tournament_path", help="Existing .tgo.json tournament file.")
 
+    enter_result_parser = subparsers.add_parser("enter-result", help="Record a game result.")
+    enter_result_parser.add_argument("tournament_path", help="Existing .tgo.json tournament file.")
+    enter_result_parser.add_argument("--round", dest="round_number", required=True, type=int, help="Round number.")
+    enter_result_parser.add_argument("--board", dest="board_number", required=True, type=int, help="Board number.")
+    enter_result_parser.add_argument(
+        "--winner",
+        required=True,
+        choices=("black", "white"),
+        help="Winning colour.",
+    )
+
     return parser
 
 
@@ -60,6 +71,19 @@ def main(argv: list[str] | None = None) -> int:
             tournament.rounds.append(round_obj)
             save_tournament(tournament, Path(args.tournament_path))
             print(f"Paired round {round_obj.number} with {len(round_obj.games)} games.")
+            return 0
+
+        if args.command == "enter-result":
+            tournament = load_tournament(Path(args.tournament_path))
+            tournament.record_result(
+                round_number=args.round_number,
+                board_number=args.board_number,
+                winner=args.winner,
+            )
+            save_tournament(tournament, Path(args.tournament_path))
+            print(
+                f"Recorded {args.winner} win for round {args.round_number} board {args.board_number}."
+            )
             return 0
     except (TournamentStoreError, OSError, ValueError) as exc:
         print(f"Error: {exc}", file=sys.stderr)

@@ -3,8 +3,10 @@ from pairing.domain.player import Player
 from pairing.domain.result import Result
 from pairing.domain.round import Round
 from pairing.domain.tournament import Tournament
+from pairing.cli.main import main
 from pairing.engine.history import colour_history_by_player, opponent_ids_by_player
 from pairing.engine.standings import calculate_standings
+from pairing.storage.json_store import load_tournament, save_tournament
 
 
 def test_history_helpers_track_opponents_and_colours_for_completed_games_only() -> None:
@@ -249,3 +251,40 @@ def test_calculate_standings_uses_rank_seed_and_player_id_as_final_sort_keys() -
         "Alpha Id",
         "Omega Id",
     ]
+
+
+def test_standings_update_after_result_entry(tmp_path) -> None:
+    tournament_path = tmp_path / "example.tgo.json"
+    tournament = Tournament.create("Example Weiqi Open")
+    tournament.players.extend(
+        [
+            Player.create("Alice", rank="4d", seed_number=1),
+            Player.create("Bob", rank="3d", seed_number=2),
+            Player.create("Charlie", rank="1d", seed_number=3),
+            Player.create("Diana", rank="1k", seed_number=4),
+        ]
+    )
+    save_tournament(tournament, tournament_path)
+
+    assert main(["pair-round", str(tournament_path)]) == 0
+    assert main(
+        [
+            "enter-result",
+            str(tournament_path),
+            "--round",
+            "1",
+            "--board",
+            "1",
+            "--winner",
+            "white",
+        ]
+    ) == 0
+
+    loaded_tournament = load_tournament(tournament_path)
+    standings = calculate_standings(loaded_tournament)
+
+    winning_game = loaded_tournament.rounds[0].games[0]
+    assert standings[0].player.id == winning_game.white_player_id
+    assert standings[0].score == 1.0
+    losing_entry = next(entry for entry in standings if entry.player.id == winning_game.black_player_id)
+    assert losing_entry.score == 0.0

@@ -144,3 +144,80 @@ def test_cli_pair_round_refuses_to_exceed_configured_round_count(tmp_path, capsy
     captured = capsys.readouterr()
     assert exit_code == 1
     assert captured.err == "Error: Cannot pair round 2 beyond configured number of rounds (1).\n"
+
+
+def test_cli_enter_result_records_black_win_and_completes_round(tmp_path, capsys):
+    tournament_path = tmp_path / "example.tgo.json"
+    tournament = Tournament.create("Example Weiqi Open")
+    tournament.players.extend(
+        [
+            Player.create("Alice", rank="4d", seed_number=1),
+            Player.create("Bob", rank="3d", seed_number=2),
+        ]
+    )
+    save_tournament(tournament, tournament_path)
+    assert main(["pair-round", str(tournament_path)]) == 0
+    capsys.readouterr()
+
+    exit_code = main(
+        [
+            "enter-result",
+            str(tournament_path),
+            "--round",
+            "1",
+            "--board",
+            "1",
+            "--winner",
+            "black",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert captured.out == "Recorded black win for round 1 board 1.\n"
+
+    loaded_tournament = load_tournament(tournament_path)
+    game = loaded_tournament.rounds[0].games[0]
+    assert game.result.status == "completed"
+    assert game.result.result_type == "normal"
+    assert game.result.winner_player_id == game.black_player_id
+    assert loaded_tournament.rounds[0].status == "completed"
+    assert loaded_tournament.rounds[0].completed_at is not None
+    assert loaded_tournament.audit_log[-1].event_type == "result_entered"
+    assert loaded_tournament.audit_log[-1].round_number == 1
+    assert loaded_tournament.audit_log[-1].details == {
+        "board_number": 1,
+        "winner": "black",
+        "winner_player_id": game.black_player_id,
+    }
+
+
+def test_cli_enter_result_rejects_unknown_round_or_board(tmp_path, capsys):
+    tournament_path = tmp_path / "example.tgo.json"
+    tournament = Tournament.create("Example Weiqi Open")
+    tournament.players.extend(
+        [
+            Player.create("Alice", rank="4d", seed_number=1),
+            Player.create("Bob", rank="3d", seed_number=2),
+        ]
+    )
+    save_tournament(tournament, tournament_path)
+    assert main(["pair-round", str(tournament_path)]) == 0
+    capsys.readouterr()
+
+    exit_code = main(
+        [
+            "enter-result",
+            str(tournament_path),
+            "--round",
+            "9",
+            "--board",
+            "1",
+            "--winner",
+            "black",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert captured.err == "Error: Round 9 not found.\n"
