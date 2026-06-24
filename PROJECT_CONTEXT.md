@@ -45,52 +45,26 @@ The current product path is:
 
 - Stage 2 Swiss foundation merged into this worktree
 - Stage 3 planning/spec committed
-- Slice A complete:
-  - typed `Result`, `Game`, and `Round`
-  - `Tournament.rounds` upgraded from raw dicts to typed rounds
-  - stricter round/game/result deserialization
-  - malformed round payload regression coverage
-
-### Completed
-
-- Slice B complete:
-  - pairing/opponent history helpers
-  - colour history helpers
-  - `StandingEntry`
-  - `calculate_standings`
-  - score, wins, losses, byes, opponents, colours, SOS, SOSOS
-  - deterministic standings ordering
-  - regression fix so pending future pairings do not affect standings history
-- Slice C complete:
-  - round 1 Swiss pairing engine
-  - bye, colour, and explanation helper modules
-  - `pair-round` CLI command
-  - round-aware pairing explanations
-  - enforcement of configured `round_count`
-- Slice D complete:
-  - `enter-result` CLI command
-  - tournament helpers for round/game lookup
-  - result recording, round auto-completion, and audit events
-  - domain-level validation for invalid winners and bye-board protection
-- Slice E complete:
-  - later-round Swiss pairing
-  - score-group floaters and repeat-opponent avoidance
-  - bye selection for later rounds
-  - round-aware colour assignment and explanations
-- Slice F complete:
-  - stale-round invalidation when an earlier result changes
-  - `regenerate-from` CLI command
-  - standings/history skip stale rounds
-  - regeneration and stale-round regression coverage
-- Stage 3 branch setup:
-  - worktree now tracks the Stage 2 Swiss codebase baseline
-  - McMahon implementation will start from the shared pairing pipeline
+- McMahon format persistence complete:
+  - `Tournament.create(..., format="mcmahon")`
+  - `TournamentConfig.mcmahon_bar_rank`
+  - format round-trips through save/load
+- McMahon pairing core complete:
+  - shared pairing core extracted
+  - McMahon starting-score policy
+  - format-dispatched round generation
+  - McMahon-aware standings inputs and outputs
+- McMahon CLI workflow complete:
+  - `create --format mcmahon`
+  - `pair-round` dispatches by tournament format
+  - `standings` prints start/game/total columns
+  - McMahon pairings land with `pairing_method="mcmahon"`
 
 ## Recent Verified State
 
 Current verified branch state:
 
-- full suite in the Stage 3 worktree passed after the Stage 2 merge: `77 passed`
+- full suite in the Stage 3 worktree passed after McMahon CLI wiring: `84 passed`
 
 Useful verification commands:
 
@@ -103,6 +77,10 @@ python -m pytest
 
 Recent branch history:
 
+- `6828f63` Expose McMahon CLI workflow
+- `d1a69e5` Add McMahon pairing core
+- `24198f3` Add McMahon format persistence
+- `3eccd16` Document Stage 3 McMahon plan
 - `d585780` Add Swiss regeneration and stale round handling
 - `07f85d9` Fix later round Swiss bye fallback
 - `e9b8da8` Add later round Swiss pairing
@@ -116,11 +94,11 @@ Recent branch history:
 
 ## Expected Next Steps
 
-With the Stage 2 foundation merged and Stage 3 planning written, the next planned work is:
+The next planned work is:
 
-1. McMahon pairing and its score-group rules
-2. import/export hardening for real tournament workflows
-3. local-first UI work once the core engine stops moving
+1. polish McMahon explanations and audit wording if needed
+2. refresh Stage 3 docs and branch notes if any wording drift remains
+3. move on to Stage 4 import/export hardening once McMahon is settled
 
 ## Local Conventions Learned So Far
 
@@ -146,4 +124,4 @@ If a future session resumes here:
 1. open this file
 2. inspect `git log --oneline -8`
 3. run `python -m pytest`
-4. continue with Task 1 from the Stage 3 McMahon implementation plan
+4. continue with the remaining Stage 3 cleanup or Stage 4 planning
