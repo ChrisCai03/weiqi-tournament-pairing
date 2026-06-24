@@ -62,7 +62,7 @@ class Tournament:
         )
         return tournament
 
-    def add_players(self, players: list[Player]) -> None:
+    def add_players(self, players: list[Player], *, actor: str = "cli") -> None:
         next_seed = max((player.seed_number for player in self.players), default=0)
         for player in players:
             if player.seed_number == 0:
@@ -75,6 +75,7 @@ class Tournament:
             AuditLogEntry.create(
                 "players_imported",
                 f"Imported {len(players)} players.",
+                actor=actor,
                 details={"count": len(players)},
             )
         )
@@ -95,7 +96,14 @@ class Tournament:
                 return game
         raise ValueError(f"Board {board_number} not found in round {round_number}.")
 
-    def record_result(self, *, round_number: int, board_number: int, winner: str) -> None:
+    def record_result(
+        self,
+        *,
+        round_number: int,
+        board_number: int,
+        winner: str,
+        actor: str = "cli",
+    ) -> list[Round]:
         game = self.get_game(round_number, board_number)
         if winner not in {"black", "white"}:
             raise ValueError("Winner must be 'black' or 'white'.")
@@ -120,6 +128,7 @@ class Tournament:
             AuditLogEntry.create(
                 "result_entered",
                 f"Recorded {winner} win for round {round_number} board {board_number}.",
+                actor=actor,
                 round_number=round_number,
                 details={
                     "board_number": board_number,
@@ -133,12 +142,14 @@ class Tournament:
                 AuditLogEntry.create(
                     "future_rounds_invalidated",
                     f"Marked {len(invalidated_rounds)} later rounds stale after round {round_number}.",
+                    actor=actor,
                     round_number=round_number,
                     details={
                         "stale_round_numbers": [round_obj.number for round_obj in invalidated_rounds],
                     },
                 )
             )
+        return invalidated_rounds
 
     def mark_rounds_stale_after(self, round_number: int) -> list[Round]:
         stale_rounds = [

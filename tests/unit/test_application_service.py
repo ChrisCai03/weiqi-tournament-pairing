@@ -1,0 +1,120 @@
+import pytest
+
+from pairing.application import TournamentService
+from pairing.domain import Player, Tournament
+from pairing.storage import load_tournament, save_tournament
+
+
+def _write_four_player_tournament(path, *, format: str = "swiss") -> None:
+    tournament = Tournament.create("Service Open", round_count=3, format=format)
+    tournament.players.extend(
+        [
+            Player.create("Alice", rank="4d", seed_number=1),
+            Player.create("Bob", rank="3d", seed_number=2),
+            Player.create("Cara", rank="2d", seed_number=3),
+            Player.create("Devin", rank="1d", seed_number=4),
+        ]
+    )
+    save_tournament(tournament, path)
+
+
+def test_service_creates_tournament_file(tmp_path) -> None:
+    path = tmp_path / "event.tgo.json"
+
+    outcome = TournamentService.create(
+        path,
+        name="Service Open",
+        round_count=4,
+        format="mcmahon",
+        actor="web",
+    )
+
+    loaded = load_tournament(path)
+    assert outcome.path == path
+    assert loaded.name == "Service Open"
+    assert loaded.format == "mcmahon"
+    assert loaded.config.round_count == 4
+    assert loaded.audit_log[-1].actor == "web"
+
+
+def test_service_imports_players_and_records_actor(tmp_path) -> None:
+    path = tmp_path / "event.tgo.json"
+    TournamentService.create(path, name="Service Open")
+    service = TournamentService(path)
+
+    outcome = service.import_players_text(
+        "name,rank\nAlice,3d\nBob,1k\n",
+        actor="web",
+    )
+
+    loaded = load_tournament(path)
+    assert outcome.imported_count == 2
+    assert [player.seed_number for player in loaded.players] == [1, 2]
+    assert loaded.audit_log[-1].event_type == "players_imported"
+    assert loaded.audit_log[-1].actor == "web"
+
+
+def test_service_generates_round_and_audit_event(tmp_path) -> None:
+    path = tmp_path / "event.tgo.json"
+    _write_four_player_tournament(path)
+
+    outcome = TournamentService(path).generate_next_round(actor="web")
+
+    loaded = load_tournament(path)
+    assert outcome.round_number == 1
+    assert outcome.game_count == 2
+    assert loaded.audit_log[-1].event_type == "round_pairings_generated"
+    assert loaded.audit_log[-1].actor == "web"
+    assert loaded.audit_log[-1].round_number == 1
+
+
+def test_service_records_result_and_reloads_state(tmp_path) -> None:
+    path = tmp_path / "event.tgo.json"
+    _write_four_player_tournament(path)
+    service = TournamentService(path)
+    service.generate_next_round()
+
+    outcome = service.record_result(
+        round_number=1,
+        board_number=1,
+        winner="black",
+        actor="web",
+    )
+
+    loaded = load_tournament(path)
+    assert outcome.round_number == 1
+    assert outcome.board_number == 1
+    assert not outcome.corrected
+    assert loaded.rounds[0].games[0].result.status == "completed"
+    assert loaded.audit_log[-1].actor == "web"
+
+
+def test_service_failure_leaves_file_unchanged(tmp_path) -> None:
+    path = tmp_path / "event.tgo.json"
+    _write_four_player_tournament(path)
+    service = TournamentService(path)
+    before = path.read_bytes()
+
+    with pytest.raises(ValueError, match="Round 9 not found"):
+        service.record_result(round_number=9, board_number=1, winner="black")
+
+    assert path.read_bytes() == before
+
+
+def test_service_returns_standings_and_exports_without_mutating_file(tmp_path) -> None:
+    path = tmp_path / "event.tgo.json"
+    _write_four_player_tournament(path)
+    service = TournamentService(path)
+    before = path.read_bytes()
+
+    standings = service.standings()
+    players_csv = service.export_csv("players")
+
+    assert [entry.player.display_name for entry in standings] == [
+        "Alice",
+        "Bob",
+        "Cara",
+        "Devin",
+    ]
+    assert "Name,Rank,Country" in players_csv
+    assert path.read_bytes() == before
