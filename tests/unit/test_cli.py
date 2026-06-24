@@ -124,3 +124,23 @@ def test_cli_pair_round_creates_first_round(tmp_path, capsys):
         for game in loaded_tournament.rounds[0].games
         if game.result.result_type == "bye"
     ) == 1
+
+
+def test_cli_pair_round_refuses_to_exceed_configured_round_count(tmp_path, capsys):
+    tournament_path = tmp_path / "example.tgo.json"
+    tournament = Tournament.create("Example Weiqi Open", round_count=1)
+    tournament.players.extend(
+        [
+            Player.create("Alice", rank="4d", seed_number=1),
+            Player.create("Bob", rank="3d", seed_number=2),
+        ]
+    )
+    save_tournament(tournament, tournament_path)
+    assert main(["pair-round", str(tournament_path)]) == 0
+    capsys.readouterr()
+
+    exit_code = main(["pair-round", str(tournament_path)])
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert captured.err == "Error: Cannot pair round 2 beyond configured number of rounds (1).\n"

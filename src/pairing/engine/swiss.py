@@ -7,7 +7,7 @@ from pairing.domain.round import Round
 from pairing.domain.tournament import Tournament
 from pairing.engine.bye import select_bye_player
 from pairing.engine.colours import assign_colours
-from pairing.engine.explanations import bye_explanation, first_round_pairing_explanation
+from pairing.engine.explanations import bye_explanation, round_pairing_explanation, round_summary
 
 
 def generate_next_round(tournament: Tournament) -> Round:
@@ -16,6 +16,11 @@ def generate_next_round(tournament: Tournament) -> Round:
         raise ValueError("Tournament must have at least one active player.")
 
     round_number = tournament.next_round_number()
+    if round_number > tournament.config.round_count:
+        raise ValueError(
+            f"Cannot pair round {round_number} beyond configured number of rounds "
+            f"({tournament.config.round_count})."
+        )
     paired_players = list(active_players)
     games: list[Game] = []
 
@@ -27,7 +32,7 @@ def generate_next_round(tournament: Tournament) -> Round:
             board_number=1,
             black_player_id=bye_player.id,
             white_player_id=None,
-            pairing_explanation=bye_explanation(player=bye_player),
+            pairing_explanation=bye_explanation(round_number=round_number, player=bye_player),
         )
         bye_game.result = Result.completed(result_type="bye", winner_player_id=bye_player.id)
         games.append(bye_game)
@@ -49,7 +54,8 @@ def generate_next_round(tournament: Tournament) -> Round:
                 board_number=board_number,
                 black_player_id=black_player_id,
                 white_player_id=white_player_id,
-                pairing_explanation=first_round_pairing_explanation(
+                pairing_explanation=round_pairing_explanation(
+                    round_number=round_number,
                     top_player=top_player,
                     bottom_player=bottom_player,
                 ),
@@ -62,7 +68,7 @@ def generate_next_round(tournament: Tournament) -> Round:
         games=games,
         pairing_method="swiss",
         pairing_seed=tournament.config.random_seed,
-        explanation_summary=["Round 1 Swiss pairing generated."],
+        explanation_summary=round_summary(round_number=round_number),
     )
 
 

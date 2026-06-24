@@ -1,6 +1,8 @@
 import pytest
 
+from pairing.domain.game import Game
 from pairing.domain.player import Player
+from pairing.domain.round import Round
 from pairing.domain.tournament import Tournament
 from pairing.engine.swiss import generate_next_round
 
@@ -64,3 +66,67 @@ def test_generate_first_round_assigns_bye_to_lowest_ranked_active_player() -> No
     assert bye_game.result.status == "completed"
     assert bye_game.result.winner_player_id == tournament.players[4].id
     assert {bye_game.black_player_id, bye_game.white_player_id} == {tournament.players[4].id, None}
+
+
+def test_generate_next_round_uses_actual_round_number_in_metadata_and_explanations() -> None:
+    tournament = Tournament.create("Example Weiqi Open", round_count=3)
+    tournament.players.extend(
+        [
+            Player.create("Alice", rank="4d", seed_number=1),
+            Player.create("Bob", rank="3d", seed_number=2),
+            Player.create("Charlie", rank="1d", seed_number=3),
+            Player.create("Diana", rank="1k", seed_number=4),
+        ]
+    )
+    existing_round = Round.create(
+        number=1,
+        games=[
+            Game.create(
+                round_number=1,
+                board_number=1,
+                black_player_id=tournament.players[0].id,
+                white_player_id=tournament.players[1].id,
+                pairing_explanation=["Already paired."],
+            )
+        ],
+        pairing_method="swiss",
+        pairing_seed=tournament.config.random_seed,
+        explanation_summary=["Round 1 Swiss pairing generated."],
+    )
+    tournament.rounds.append(existing_round)
+
+    round_obj = generate_next_round(tournament)
+
+    assert round_obj.number == 2
+    assert round_obj.explanation_summary == ["Round 2 Swiss pairing generated."]
+    assert all("Round 2" in explanation for game in round_obj.games for explanation in game.pairing_explanation)
+
+
+def test_generate_next_round_refuses_to_pair_beyond_configured_round_count() -> None:
+    tournament = Tournament.create("Example Weiqi Open", round_count=1)
+    tournament.players.extend(
+        [
+            Player.create("Alice", rank="4d", seed_number=1),
+            Player.create("Bob", rank="3d", seed_number=2),
+        ]
+    )
+    tournament.rounds.append(
+        Round.create(
+            number=1,
+            games=[
+                Game.create(
+                    round_number=1,
+                    board_number=1,
+                    black_player_id=tournament.players[0].id,
+                    white_player_id=tournament.players[1].id,
+                    pairing_explanation=["Round 1 Swiss pairing generated."],
+                )
+            ],
+            pairing_method="swiss",
+            pairing_seed=tournament.config.random_seed,
+            explanation_summary=["Round 1 Swiss pairing generated."],
+        )
+    )
+
+    with pytest.raises(ValueError, match="configured number of rounds"):
+        generate_next_round(tournament)
