@@ -19,6 +19,9 @@ def build_parser() -> argparse.ArgumentParser:
     create_parser.add_argument("--rounds", type=int, default=5, help="Number of rounds.")
     create_parser.add_argument("--format", default="swiss", choices=("swiss", "mcmahon"), help="Tournament format.")
 
+    demo_parser = subparsers.add_parser("demo", help="Create a sample tournament file.")
+    demo_parser.add_argument("path", help="Output .tgo.json path.")
+
     import_parser = subparsers.add_parser("import-players", help="Import players from CSV.")
     import_parser.add_argument("tournament_path", help="Existing .tgo.json tournament file.")
     import_parser.add_argument("csv_path", help="Player CSV file.")
@@ -46,6 +49,11 @@ def build_parser() -> argparse.ArgumentParser:
     web_parser.add_argument("tournament_path", help="Existing .tgo.json tournament file.")
     web_parser.add_argument("--host", default="127.0.0.1", help="Listen host.")
     web_parser.add_argument("--port", type=int, default=8000, help="Listen port.")
+    web_parser.add_argument(
+        "--open-browser",
+        action="store_true",
+        help="Open the local URL after the server binds successfully.",
+    )
 
     enter_result_parser = subparsers.add_parser("enter-result", help="Record a game result.")
     enter_result_parser.add_argument("tournament_path", help="Existing .tgo.json tournament file.")
@@ -104,6 +112,11 @@ def main(argv: list[str] | None = None) -> int:
                 actor="cli",
             )
             print(f"Created tournament: {args.path}")
+            return 0
+
+        if args.command == "demo":
+            TournamentService.create_demo(args.path, actor="cli")
+            print(f"Created demo tournament: {args.path}")
             return 0
 
         if args.command == "import-players":
@@ -175,7 +188,12 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         if args.command == "web":
-            serve_tournament(Path(args.tournament_path), host=args.host, port=args.port)
+            serve_tournament(
+                Path(args.tournament_path),
+                host=args.host,
+                port=args.port,
+                open_browser=args.open_browser,
+            )
             return 0
     except (TournamentStoreError, OSError, ValueError) as exc:
         print(f"Error: {exc}", file=sys.stderr)

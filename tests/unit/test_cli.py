@@ -1,5 +1,7 @@
 import csv
+from unittest.mock import patch
 
+from pairing.application import TournamentService
 from pairing.cli.main import main
 from pairing.domain.player import Player
 from pairing.domain.tournament import Tournament
@@ -16,6 +18,42 @@ def test_cli_create_command(tmp_path):
     tournament = load_tournament(tournament_path)
     assert tournament.name == "Example Weiqi Open"
     assert tournament.config.round_count == 5
+
+
+def test_cli_demo_creates_eight_player_sample(tmp_path, capsys) -> None:
+    tournament_path = tmp_path / "demo.tgo.json"
+
+    exit_code = main(["demo", str(tournament_path)])
+
+    captured = capsys.readouterr()
+    tournament = load_tournament(tournament_path)
+    assert exit_code == 0
+    assert "Created demo tournament" in captured.out
+    assert [player.display_name for player in tournament.players] == [
+        "Aya",
+        "Ben",
+        "Cheng",
+        "Dina",
+        "Eli",
+        "Fiona",
+        "Gao",
+        "Hana",
+    ]
+
+
+def test_cli_web_passes_open_browser_flag(tmp_path) -> None:
+    tournament_path = tmp_path / "demo.tgo.json"
+    TournamentService.create_demo(tournament_path)
+
+    with patch("pairing.cli.main.serve_tournament") as serve:
+        assert main(["web", str(tournament_path), "--open-browser"]) == 0
+
+    serve.assert_called_once_with(
+        tournament_path,
+        host="127.0.0.1",
+        port=8000,
+        open_browser=True,
+    )
 
 
 def test_cli_create_mcmahon_tournament_and_show_standings(tmp_path, capsys):

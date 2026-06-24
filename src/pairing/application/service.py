@@ -9,6 +9,7 @@ from pairing.application.results import (
     RoundOutcome,
 )
 from pairing.domain.audit import AuditLogEntry
+from pairing.domain.player import Player
 from pairing.domain.tournament import Tournament
 from pairing.engine.mcmahon import mcmahon_starting_score
 from pairing.engine.round_generation import generate_next_round
@@ -43,6 +44,36 @@ class TournamentService:
         path = Path(tournament_path)
         tournament = Tournament.create(name, round_count=round_count, format=format)
         tournament.audit_log[-1].actor = actor
+        save_tournament(tournament, path)
+        return CreateOutcome(path=path)
+
+    @classmethod
+    def create_demo(
+        cls,
+        tournament_path: str | Path,
+        *,
+        actor: str = "cli",
+    ) -> CreateOutcome:
+        path = Path(tournament_path)
+        tournament = Tournament.create(
+            "Weiqi Tournament Demo",
+            round_count=5,
+            format="mcmahon",
+        )
+        tournament.audit_log[-1].actor = actor
+        tournament.add_players(
+            [
+                Player.create("Aya", rank="3d", seed_number=1),
+                Player.create("Ben", rank="2d", seed_number=2),
+                Player.create("Cheng", rank="1d", seed_number=3),
+                Player.create("Dina", rank="1k", seed_number=4),
+                Player.create("Eli", rank="2k", seed_number=5),
+                Player.create("Fiona", rank="3k", seed_number=6),
+                Player.create("Gao", rank="5k", seed_number=7),
+                Player.create("Hana", rank="6k", seed_number=8),
+            ],
+            actor=actor,
+        )
         save_tournament(tournament, path)
         return CreateOutcome(path=path)
 
