@@ -91,16 +91,16 @@ def _generate_later_round(*, tournament: Tournament, round_number: int) -> list[
     games: list[Game] = []
 
     if len(active_entries) % 2 == 1:
-        bye_entry = select_bye_player(active_entries)
-        active_entries = [entry for entry in active_entries if entry.player.id != bye_entry.player.id]
+        bye_player = select_bye_player(active_entries)
+        active_entries = [entry for entry in active_entries if entry.player.id != bye_player.id]
         bye_game = Game.create(
             round_number=round_number,
             board_number=1,
-            black_player_id=bye_entry.player.id,
+            black_player_id=bye_player.id,
             white_player_id=None,
-            pairing_explanation=bye_explanation(round_number=round_number, player=bye_entry.player),
+            pairing_explanation=bye_explanation(round_number=round_number, player=bye_player),
         )
-        bye_game.result = Result.completed(result_type="bye", winner_player_id=bye_entry.player.id)
+        bye_game.result = Result.completed(result_type="bye", winner_player_id=bye_player.id)
         games.append(bye_game)
 
     pairings = _pair_score_groups(active_entries, opponent_history)
