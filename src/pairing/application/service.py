@@ -52,8 +52,9 @@ class TournamentService:
         *,
         actor: str = "cli",
     ) -> ImportOutcome:
+        tournament = load_tournament(self.path)
         report = import_players_from_csv(csv_path)
-        return self._apply_player_import(report, actor=actor)
+        return self._apply_player_import(report, tournament=tournament, actor=actor)
 
     def import_players_text(
         self,
@@ -61,8 +62,9 @@ class TournamentService:
         *,
         actor: str = "cli",
     ) -> ImportOutcome:
+        tournament = load_tournament(self.path)
         report = import_players_from_csv_text(csv_text)
-        return self._apply_player_import(report, actor=actor)
+        return self._apply_player_import(report, tournament=tournament, actor=actor)
 
     def generate_next_round(self, *, actor: str = "cli") -> RoundOutcome:
         tournament = load_tournament(self.path)
@@ -176,10 +178,15 @@ class TournamentService:
     def load(self) -> Tournament:
         return load_tournament(self.path)
 
-    def _apply_player_import(self, report, *, actor: str) -> ImportOutcome:
+    def _apply_player_import(
+        self,
+        report,
+        *,
+        tournament: Tournament,
+        actor: str,
+    ) -> ImportOutcome:
         if not report.valid:
             raise ValueError("\n".join(report.errors))
-        tournament = load_tournament(self.path)
         tournament.add_players(report.players, actor=actor)
         save_tournament(tournament, self.path)
         return ImportOutcome(

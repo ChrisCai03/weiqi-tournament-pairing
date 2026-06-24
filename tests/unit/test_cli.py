@@ -147,6 +147,8 @@ def test_cli_pair_round_creates_first_round(tmp_path, capsys):
         for game in loaded_tournament.rounds[0].games
         if game.result.result_type == "bye"
     ) == 1
+    assert loaded_tournament.audit_log[-1].event_type == "round_pairings_generated"
+    assert loaded_tournament.audit_log[-1].actor == "cli"
 
 
 def test_cli_pair_round_uses_mcmahon_format(tmp_path, capsys):

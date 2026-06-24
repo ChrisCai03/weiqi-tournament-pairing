@@ -4,12 +4,8 @@ import argparse
 import sys
 from pathlib import Path
 
-from pairing.domain.tournament import Tournament
-from pairing.engine.mcmahon import mcmahon_starting_score
-from pairing.engine.round_generation import generate_next_round
-from pairing.engine.standings import calculate_standings
-from pairing.import_export.csv_import import import_players_from_csv
-from pairing.storage import TournamentStoreError, load_tournament, save_tournament
+from pairing.application import TournamentService
+from pairing.storage import TournamentStoreError
 from pairing.web.server import serve_tournament
 
 
@@ -71,36 +67,37 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         if args.command == "create":
-            tournament = Tournament.create(args.name, round_count=args.rounds, format=args.format)
-            save_tournament(tournament, Path(args.path))
+            TournamentService.create(
+                Path(args.path),
+                name=args.name,
+                round_count=args.rounds,
+                format=args.format,
+                actor="cli",
+            )
             print(f"Created tournament: {args.path}")
             return 0
 
         if args.command == "import-players":
-            tournament = load_tournament(Path(args.tournament_path))
-            report = import_players_from_csv(Path(args.csv_path))
-            for warning in report.warnings:
+            outcome = TournamentService(args.tournament_path).import_players_file(
+                args.csv_path,
+                actor="cli",
+            )
+            for warning in outcome.warnings:
                 print(f"Warning: {warning}", file=sys.stderr)
-            if not report.valid:
-                for error in report.errors:
-                    print(f"Error: {error}", file=sys.stderr)
-                return 1
-            tournament.add_players(report.players)
-            save_tournament(tournament, Path(args.tournament_path))
-            print(f"Imported {len(report.players)} players.")
+            print(f"Imported {outcome.imported_count} players.")
             return 0
 
         if args.command == "pair-round":
-            tournament = load_tournament(Path(args.tournament_path))
-            round_obj = generate_next_round(tournament)
-            tournament.rounds.append(round_obj)
-            save_tournament(tournament, Path(args.tournament_path))
-            print(f"Paired round {round_obj.number} with {len(round_obj.games)} games.")
+            outcome = TournamentService(args.tournament_path).generate_next_round(actor="cli")
+            for warning in outcome.warnings:
+                print(f"Warning: {warning}", file=sys.stderr)
+            print(f"Paired round {outcome.round_number} with {outcome.game_count} games.")
             return 0
 
         if args.command == "standings":
-            tournament = load_tournament(Path(args.tournament_path))
-            standings = _calculate_display_standings(tournament)
+            service = TournamentService(args.tournament_path)
+            tournament = service.load()
+            standings = service.standings()
             print(f"Standings for {tournament.name} ({tournament.format})")
             print("Pos\tPlayer\tStart\tGame\tTotal\tW\tL\tSOS\tSOSOS")
             for index, entry in enumerate(standings, start=1):
@@ -112,33 +109,24 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         if args.command == "regenerate-from":
-            tournament = load_tournament(Path(args.tournament_path))
-            removed_rounds = tournament.mark_rounds_stale_after(args.round_number)
-            stale_rounds = tournament.purge_stale_rounds()
-            if args.round_number >= tournament.config.round_count:
-                save_tournament(tournament, Path(args.tournament_path))
+            outcome = TournamentService(args.tournament_path).regenerate_from(
+                args.round_number,
+                actor="cli",
+            )
+            if outcome is None:
                 print(f"No later rounds to regenerate after round {args.round_number}.")
                 return 0
 
-            round_obj = generate_next_round(tournament)
-            tournament.rounds.append(round_obj)
-            save_tournament(tournament, Path(args.tournament_path))
-            if removed_rounds or stale_rounds:
-                print(
-                    f"Regenerated round {round_obj.number} after removing {len(removed_rounds or stale_rounds)} later rounds."
-                )
-            else:
-                print(f"Generated round {round_obj.number}.")
+            print(f"Generated round {outcome.round_number}.")
             return 0
 
         if args.command == "enter-result":
-            tournament = load_tournament(Path(args.tournament_path))
-            tournament.record_result(
+            TournamentService(args.tournament_path).record_result(
                 round_number=args.round_number,
                 board_number=args.board_number,
                 winner=args.winner,
+                actor="cli",
             )
-            save_tournament(tournament, Path(args.tournament_path))
             print(
                 f"Recorded {args.winner} win for round {args.round_number} board {args.board_number}."
             )
@@ -153,15 +141,6 @@ def main(argv: list[str] | None = None) -> int:
 
     parser.error(f"Unknown command: {args.command}")
     return 2
-
-
-def _calculate_display_standings(tournament: Tournament):
-    if tournament.format == "mcmahon":
-        return calculate_standings(
-            tournament,
-            starting_score_provider=lambda player: mcmahon_starting_score(player, tournament),
-        )
-    return calculate_standings(tournament)
 
 
 if __name__ == "__main__":
