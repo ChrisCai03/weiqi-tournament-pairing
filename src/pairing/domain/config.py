@@ -32,6 +32,7 @@ def _parse_round_count(value: object) -> int:
 class TournamentConfig:
     round_count: int = 5
     pairing_method: str = "swiss"
+    mcmahon_bar_rank: str = "1d"
     score_win: float = 1.0
     score_loss: float = 0.0
     score_draw: float = 0.5
@@ -53,6 +54,7 @@ class TournamentConfig:
         return cls(
             round_count=_parse_round_count(data.get("round_count", 5)),
             pairing_method=str(data.get("pairing_method", "swiss")),
+            mcmahon_bar_rank=str(data.get("mcmahon_bar_rank", "1d")),
             score_win=float(data.get("score_win", 1.0)),
             score_loss=float(data.get("score_loss", 0.0)),
             score_draw=float(data.get("score_draw", 0.5)),

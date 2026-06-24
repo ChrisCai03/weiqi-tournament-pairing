@@ -30,16 +30,18 @@ class Tournament:
     audit_log: list[AuditLogEntry] = field(default_factory=list)
 
     @classmethod
-    def create(cls, name: str, *, round_count: int = 5) -> "Tournament":
+    def create(cls, name: str, *, round_count: int = 5, format: str = "swiss") -> "Tournament":
         if round_count <= 0:
             raise ValueError("Round count must be positive.")
+        if format not in {"swiss", "mcmahon"}:
+            raise ValueError("Format must be 'swiss' or 'mcmahon'.")
 
-        config = TournamentConfig(round_count=round_count)
+        config = TournamentConfig(round_count=round_count, pairing_method=format)
         tournament = cls(
             id=str(uuid4()),
             name=name.strip(),
             game_type="go",
-            format="swiss",
+            format=format,
             status="draft",
             schema_version=SCHEMA_VERSION,
             config=config,

@@ -52,6 +52,14 @@ def test_tournament_rounds_round_trip() -> None:
     assert restored.rounds[0].games[0].board_number == 1
 
 
+def test_tournament_rounds_round_trip_preserves_mcmahon_format() -> None:
+    tournament = Tournament.create("McMahon Open", format="mcmahon")
+    restored = Tournament.from_dict(tournament.to_dict())
+
+    assert restored.format == "mcmahon"
+    assert restored.config.pairing_method == "mcmahon"
+
+
 def test_round_rejects_duplicate_board_numbers() -> None:
     game_one = Game.create(
         round_number=1,
