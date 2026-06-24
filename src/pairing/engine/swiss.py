@@ -7,7 +7,8 @@ from pairing.domain.round import Round
 from pairing.domain.tournament import Tournament
 from pairing.engine.bye import ordered_later_round_bye_candidates, select_bye_player
 from pairing.engine.colours import assign_colours
-from pairing.engine.history import colour_history_by_player, opponent_ids_by_player, players_have_met
+from pairing.engine.history import colour_history_by_player, opponent_ids_by_player
+from pairing.engine.pairing_core import pair_score_groups
 from pairing.engine.standings import StandingEntry, calculate_standings
 from pairing.engine.explanations import bye_explanation, round_pairing_explanation, round_summary
 
@@ -90,11 +91,6 @@ def _generate_later_round(*, tournament: Tournament, round_number: int) -> list[
     active_entries = [entry for entry in standings if entry.player.status == "active"]
     opponent_history = opponent_ids_by_player(tournament)
     colour_history = colour_history_by_player(tournament)
-    pairing_cache: dict[tuple[str, ...], list[tuple[StandingEntry, StandingEntry]] | None] = {}
-    group_cache: dict[
-        tuple[int, tuple[str, ...], tuple[tuple[str, ...], ...]],
-        list[tuple[StandingEntry, StandingEntry]] | None,
-    ] = {}
     games: list[Game] = []
     pairings: list[tuple[StandingEntry, StandingEntry]] | None = None
 
@@ -103,12 +99,7 @@ def _generate_later_round(*, tournament: Tournament, round_number: int) -> list[
             remaining_entries = [
                 entry for entry in active_entries if entry.player.id != bye_entry.player.id
             ]
-            pairings = _pair_score_groups(
-                remaining_entries,
-                opponent_history,
-                pairing_cache=pairing_cache,
-                group_cache=group_cache,
-            )
+            pairings = pair_score_groups(remaining_entries, opponent_history)
             if pairings is None:
                 continue
 
@@ -127,12 +118,7 @@ def _generate_later_round(*, tournament: Tournament, round_number: int) -> list[
         if pairings is None:
             raise ValueError("Unable to generate Swiss pairings without repeated opponents.")
     else:
-        pairings = _pair_score_groups(
-            active_entries,
-            opponent_history,
-            pairing_cache=pairing_cache,
-            group_cache=group_cache,
-        )
+        pairings = pair_score_groups(active_entries, opponent_history)
         if pairings is None:
             raise ValueError("Unable to generate Swiss pairings without repeated opponents.")
 
@@ -159,140 +145,6 @@ def _generate_later_round(*, tournament: Tournament, round_number: int) -> list[
 
     games.sort(key=lambda game: game.board_number)
     return games
-
-
-def _pair_score_groups(
-    entries: list[StandingEntry],
-    opponent_history: dict[str, list[str]],
-    *,
-    pairing_cache: dict[tuple[str, ...], list[tuple[StandingEntry, StandingEntry]] | None],
-    group_cache: dict[
-        tuple[int, tuple[str, ...], tuple[tuple[str, ...], ...]],
-        list[tuple[StandingEntry, StandingEntry]] | None,
-    ],
-) -> list[tuple[StandingEntry, StandingEntry]] | None:
-    score_groups = _group_entries_by_score(entries)
-    group_signature = tuple(tuple(entry.player.id for entry in group) for group in score_groups)
-    pairings = _pair_score_group_recursive(
-        score_groups,
-        group_signature,
-        opponent_history,
-        carry=(),
-        group_index=0,
-        pairing_cache=pairing_cache,
-        group_cache=group_cache,
-    )
-    return pairings
-
-
-def _pair_score_group_recursive(
-    score_groups: list[list[StandingEntry]],
-    group_signature: tuple[tuple[str, ...], ...],
-    opponent_history: dict[str, list[str]],
-    *,
-    carry: tuple[StandingEntry, ...],
-    group_index: int,
-    pairing_cache: dict[tuple[str, ...], list[tuple[StandingEntry, StandingEntry]] | None],
-    group_cache: dict[
-        tuple[int, tuple[str, ...], tuple[tuple[str, ...], ...]],
-        list[tuple[StandingEntry, StandingEntry]] | None,
-    ],
-) -> list[tuple[StandingEntry, StandingEntry]] | None:
-    if group_index >= len(score_groups):
-        return [] if not carry else None
-
-    cache_key = (group_index, tuple(entry.player.id for entry in carry), group_signature)
-    if cache_key in group_cache:
-        return group_cache[cache_key]
-
-    current_group = score_groups[group_index]
-    available = list(carry) + list(current_group)
-
-    full_pairing = _pair_entries_without_floats(available, opponent_history, pairing_cache=pairing_cache)
-    if full_pairing is not None:
-        rest = _pair_score_group_recursive(
-            score_groups,
-            group_signature,
-            opponent_history,
-            carry=(),
-            group_index=group_index + 1,
-            pairing_cache=pairing_cache,
-            group_cache=group_cache,
-        )
-        if rest is not None:
-            result = full_pairing + rest
-            group_cache[cache_key] = result
-            return result
-
-    for float_index in range(len(available) - 1, -1, -1):
-        floated_entry = available[float_index]
-        remaining = available[:float_index] + available[float_index + 1 :]
-        pairings = _pair_entries_without_floats(remaining, opponent_history, pairing_cache=pairing_cache)
-        if pairings is None:
-            continue
-
-        rest = _pair_score_group_recursive(
-            score_groups,
-            group_signature,
-            opponent_history,
-            carry=(floated_entry,),
-            group_index=group_index + 1,
-            pairing_cache=pairing_cache,
-            group_cache=group_cache,
-        )
-        if rest is not None:
-            result = pairings + rest
-            group_cache[cache_key] = result
-            return result
-
-    group_cache[cache_key] = None
-    return None
-
-
-def _pair_entries_without_floats(
-    entries: list[StandingEntry],
-    opponent_history: dict[str, list[str]],
-    *,
-    pairing_cache: dict[tuple[str, ...], list[tuple[StandingEntry, StandingEntry]] | None],
-) -> list[tuple[StandingEntry, StandingEntry]] | None:
-    cache_key = tuple(entry.player.id for entry in entries)
-    if cache_key in pairing_cache:
-        return pairing_cache[cache_key]
-
-    if not entries:
-        pairing_cache[cache_key] = []
-        return []
-
-    first_entry = entries[0]
-    for index in range(1, len(entries)):
-        partner = entries[index]
-        if players_have_met(opponent_history, first_entry.player.id, partner.player.id):
-            continue
-        remainder = entries[1:index] + entries[index + 1 :]
-        paired_remainder = _pair_entries_without_floats(
-            remainder,
-            opponent_history,
-            pairing_cache=pairing_cache,
-        )
-        if paired_remainder is not None:
-            result = [(first_entry, partner)] + paired_remainder
-            pairing_cache[cache_key] = result
-            return result
-
-    pairing_cache[cache_key] = None
-    return None
-
-
-def _group_entries_by_score(entries: list[StandingEntry]) -> list[list[StandingEntry]]:
-    grouped: list[list[StandingEntry]] = []
-    for entry in entries:
-        if grouped and entry.score == grouped[-1][0].score:
-            grouped[-1].append(entry)
-        else:
-            grouped.append([entry])
-    return grouped
-
-
 def _sorted_active_players(players: list[Player]) -> list[Player]:
     return sorted(
         (player for player in players if player.status == "active"),

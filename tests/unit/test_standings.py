@@ -331,6 +331,28 @@ def test_calculate_standings_ignores_stale_rounds() -> None:
     assert charlie_entry.score == 0.0
 
 
+def test_calculate_standings_supports_starting_scores() -> None:
+    tournament = Tournament.create("McMahon Open", format="mcmahon")
+    alice = Player.create("Alice", rank="4d", seed_number=1)
+    bob = Player.create("Bob", rank="3k", seed_number=2)
+    tournament.players.extend([alice, bob])
+
+    standings = calculate_standings(
+        tournament,
+        starting_score_provider=lambda player: 1.0 if player.id == alice.id else 0.0,
+    )
+
+    alice_entry = next(entry for entry in standings if entry.player.id == alice.id)
+    bob_entry = next(entry for entry in standings if entry.player.id == bob.id)
+
+    assert alice_entry.starting_score == 1.0
+    assert alice_entry.game_score == 0.0
+    assert alice_entry.score == 1.0
+    assert bob_entry.starting_score == 0.0
+    assert bob_entry.game_score == 0.0
+    assert bob_entry.score == 0.0
+
+
 def test_record_result_rejects_invalid_winner_value() -> None:
     tournament = Tournament.create("Example Weiqi Open")
     alice = Player.create("Alice", rank="4d", seed_number=1)
