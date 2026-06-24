@@ -1,116 +1,59 @@
 # Project Context
 
-This file is a lightweight handoff note for future sessions working on the Stage 4 web branch.
+## Current Baseline
 
-## Repository
+- Worktree: `C:\Users\user\Documents\Pairing software dev\.worktrees\stage-4-web`
+- Branch: `codex/stage-4-web`
+- Scope: one local tournament director and one managing process
+- Canonical state: schema-version-1 `.tgo.json`
 
-- Main repo: `C:\Users\user\Documents\Pairing software dev`
-- Active Stage 4 worktree: `C:\Users\user\Documents\Pairing software dev\.worktrees\stage-4-web`
-- Stage 4 branch: `codex/stage-4-web`
+The branch now contains rehabilitated Stages 1–4. It should be treated as the
+integration candidate; `main` still lags behind the implemented workflow.
 
-## High-Level Product Direction
+## Architecture
 
-The project is an open-source local-first Weiqi/Go tournament pairing application.
+CLI and web call `TournamentService`. Services own persistence workflows.
+Domain and engine code remain independent of storage and presentation.
 
-Current priorities:
+Read:
 
-1. correctness
-2. auditability
-3. simple local workflow
-4. modular engine separate from CLI/UI
+1. `README.md`
+2. `docs/architecture.md`
+3. `MAINTENANCE.md`
+4. `docs/roadmap.md`
 
-The current product path is:
+## Supported Behavior
 
-- Stage 1: data model, JSON storage, CSV import, CLI foundation
-- Stage 2: Swiss tournament workflow
-- Stage 3: McMahon tournament workflow
-- Stage 4: local web console, CSV exports, public display page
-- later: PDF output, advanced workflows
+- Swiss and simplified one-bar McMahon
+- deterministic pairings
+- pending-round progression guard
+- pending pairings in opponent/colour history
+- unavoidable repeat warnings
+- explicit result correction
+- auditable regeneration snapshots
+- CSV import/export
+- local WSGI UI and public display
 
-## Key Design Documents
+## Reserved Behavior
 
-- Stage 1 broad design:
-  - `docs/superpowers/specs/2026-06-22-weiqi-tournament-design.md`
-- Stage 2 Swiss design:
-  - `docs/superpowers/specs/2026-06-23-stage-2-swiss-design.md`
-- Stage 2 implementation plan:
-  - `docs/superpowers/plans/2026-06-23-stage-2-swiss.md`
-- Stage 3 McMahon design:
-  - `docs/superpowers/specs/2026-06-24-stage-3-mcmahon-design.md`
-- Stage 3 implementation plan:
-  - `docs/superpowers/plans/2026-06-24-stage-3-mcmahon.md`
+Draws, forfeits, manual overrides, affiliation-aware pairing, handicap,
+expanded McMahon bands, SODOS, PDF, and multi-user operation are not active
+features.
 
-## Current Stage 4 Status
+## Verification
 
-### Completed
-
-- Stage 2 Swiss foundation is merged in
-- Stage 3 McMahon workflow is merged in
-- Stage 4 web console is implemented:
-  - overview, players, pairings, results, standings, exports, display routes
-  - player CSV import form
-  - CSV export endpoints for players, pairings, results, standings
-  - public display page for boards
-- CLI now includes `web`:
-  - `pairing web <tournament_path> --host 127.0.0.1 --port 8000`
-
-## Recent Verified State
-
-Current verified branch state:
-
-- full suite in the Stage 4 worktree passed: `88 passed`
-- local browser smoke test passed against a demo tournament
-
-Useful verification commands:
+Run:
 
 ```powershell
-python -m pytest tests/unit/test_swiss_pairing.py tests/unit/test_cli.py -q
-python -m pytest
+python -m ruff format --check .
+python -m ruff check .
+python -m mypy src/pairing
+python -m compileall -q src
+python -m pytest --cov=pairing --cov-report=term-missing -q
 ```
 
-## Important Branch Commits
+## Integration Recommendation
 
-Recent branch history:
-
-- `799a479` Refresh Stage 3 handoff notes
-- `6828f63` Expose McMahon CLI workflow
-- `d1a69e5` Add McMahon pairing core
-- `24198f3` Add McMahon format persistence
-- `3eccd16` Document Stage 3 McMahon plan
-- `d585780` Add Swiss regeneration and stale round handling
-- `07f85d9` Fix later round Swiss bye fallback
-- `e9b8da8` Add later round Swiss pairing
-
-## Expected Next Steps
-
-The next planned work is:
-
-1. add PDF output or a simple print-friendly pairing sheet
-2. harden manual override and repair flows in the web UI
-3. split the web app into smaller modules once the interface settles
-
-## Local Conventions Learned So Far
-
-- Use `apply_patch` for file edits.
-- Keep changes small and commit-safe.
-- Verify with fresh test runs before claiming completion.
-- The project uses Python 3.12 from:
-  - `C:\Users\user\AppData\Local\Programs\Python\Python312\python.exe`
-- Git worktree cleanup on Windows can be messy due to temp/cache permissions. Avoid unnecessary churn in `.tmp` and `.pytest_cache`.
-
-## Architectural Notes
-
-- JSON `.tgo.json` is the canonical local save format.
-- CSV is for import/export, not full tournament persistence.
-- Pairing and standings logic should stay in `src/pairing/engine/`.
-- CLI should remain thin and orchestration-focused.
-- Tournament state should reject malformed persisted data rather than silently inventing defaults.
-
-## Resume Checklist
-
-If a future session resumes here:
-
-1. open this file
-2. inspect `git log --oneline -8`
-3. run `python -m pytest`
-4. continue with Stage 4 polish or the next export/report slice
+Review the commits after `9fd8a57`, then merge `codex/stage-4-web` into `main`
+as one rehabilitation series. Do not delete the worktree or branch until the
+user chooses the integration method.

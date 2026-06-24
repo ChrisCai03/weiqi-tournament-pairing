@@ -1,33 +1,92 @@
 # Weiqi Tournament Pairing
 
-Open-source tournament pairing software for Weiqi/Go and related board games.
+Local-first Swiss and simplified McMahon tournament software for Weiqi/Go.
 
-The first prototype is a correctness-first Python CLI that stores tournaments as `.tgo.json` files and imports players from CSV.
+The current product is designed for one tournament director running one local
+process. A schema-versioned `.tgo.json` file is the canonical tournament
+record; the CLI and simple web UI use the same application services.
 
-Stage 4 adds a local web console for the current tournament workflow, including players, pairings, results, standings, exports, and a public display page.
+## Setup
 
-## Stage 1 Commands
-
-Create a tournament:
-
-```powershell
-$env:PYTHONPATH = "src"; python -m pairing.cli.main create example.tgo.json --name "Example Weiqi Open" --rounds 5
-```
-
-Import players:
+Python 3.12 or newer is required.
 
 ```powershell
-$env:PYTHONPATH = "src"; python -m pairing.cli.main import-players example.tgo.json players.csv
+python -m pip install -e ".[dev]"
 ```
 
-Start the local web console:
+Run the quality gates:
 
 ```powershell
-$env:PYTHONPATH = "src"; python -m pairing.cli.main web example.tgo.json --port 8000
+python -m ruff format --check .
+python -m ruff check .
+python -m mypy src/pairing
+python -m pytest --cov=pairing --cov-report=term-missing -q
 ```
+
+## Quick Demo
+
+```powershell
+pairing demo demo.tgo.json
+pairing web demo.tgo.json --port 8000 --open-browser
+```
+
+The web server remains attached to the managing terminal. Stop it with
+`Ctrl+C`. Without `--open-browser`, open `http://127.0.0.1:8000/`.
+
+## Tournament Workflow
+
+Create and populate a tournament:
+
+```powershell
+pairing create event.tgo.json --name "Example Weiqi Open" --rounds 5 --format swiss
+pairing import-players event.tgo.json players.csv
+```
+
+Run a round:
+
+```powershell
+pairing pair-round event.tgo.json
+pairing enter-result event.tgo.json --round 1 --board 1 --winner black
+pairing standings event.tgo.json
+```
+
+Correct a result and rebuild downstream pairings:
+
+```powershell
+pairing correct-result event.tgo.json --round 1 --board 1 --winner white
+pairing regenerate-from event.tgo.json --round 1
+```
+
+A new round cannot be generated until the preceding round is complete.
+Unavoidable repeat opponents produce explicit warnings instead of stopping the
+tournament.
+
+## Current Scope
+
+Supported:
+
+- individual Swiss tournaments
+- simplified McMahon with one ranked bar
+- dan/kyu and unranked players
+- CSV player import and report export
+- result entry and correction
+- auditable downstream regeneration
+- local CLI and server-rendered web UI
+
+Reserved for later work:
+
+- draws, forfeits, voids, and no-shows
+- manual pairing overrides
+- affiliation-aware pairing
+- handicap pairing
+- SODOS and expanded McMahon bands
+- multi-user/networked operation
 
 ## Documentation
 
-- [Design spec](docs/superpowers/specs/2026-06-22-weiqi-tournament-design.md)
-- [CSV player import format](docs/csv-format.md)
+- [Architecture](docs/architecture.md)
+- [Roadmap](docs/roadmap.md)
+- [Maintenance log](MAINTENANCE.md)
 - [Tournament file format](docs/tournament-file-format.md)
+- [CSV format](docs/csv-format.md)
+- [Rehabilitation design](docs/superpowers/specs/2026-06-24-repository-rehabilitation-design.md)

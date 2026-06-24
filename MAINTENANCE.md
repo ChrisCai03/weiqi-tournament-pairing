@@ -10,3 +10,27 @@
 - Known defects: pending-round progression, incomplete aggregate validation, unavoidable-repeat failure, incomplete correction history, shallow Stage 4 tests, minimal McMahon coverage
 - Design: `docs/superpowers/specs/2026-06-24-repository-rehabilitation-design.md`
 - Plan: `docs/superpowers/plans/2026-06-24-repository-rehabilitation.md`
+
+## Rehabilitation Checkpoints
+
+- `fdda4fd` — characterization baseline and corrected false-positive web test
+- `b23174c` — field and aggregate validation
+- `41a1ea7` — validated, durable schema-v1 storage
+- `8947df4` — shared application-service layer
+- `1e99568` — CLI migration to services
+- `17d4c61` — progression guard and pending pairing history
+- `7d4ce34` — unavoidable-repeat fallback and warnings
+- `8cb1386` — explicit correction and regeneration snapshots
+- `34a91ec` — simplified McMahon policy
+- `35eea8f` — service-backed, split web application
+- `916c547` — demo and reliable server startup
+- `9bd00cf` — property and complete workflow tests
+- `4439c94` — Ruff, mypy, coverage, and formatting gates
+
+## Supported and Reserved Contracts
+
+Supported: Swiss, simplified one-bar McMahon, normal wins, pairing byes,
+correction, regeneration, CSV reports, CLI, and local web.
+
+Reserved: draws, forfeits, voids, no-shows, manual overrides, affiliation
+preferences, handicap, SODOS, expanded McMahon bands, PDF, and multi-user use.
