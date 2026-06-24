@@ -154,6 +154,80 @@ def test_generate_later_round_assigns_one_bye_to_the_lowest_scoring_eligible_pla
     assert bye_games[0].result.winner_player_id == devin.id
 
 
+def test_generate_later_round_falls_back_to_repeat_bye_when_the_first_choice_dead_ends() -> None:
+    tournament = Tournament.create("Example Weiqi Open", round_count=3)
+    a = Player.create("A", rank="5d", seed_number=1)
+    b = Player.create("B", rank="4d", seed_number=2)
+    c = Player.create("C", rank="3d", seed_number=3)
+    d = Player.create("D", rank="2d", seed_number=4)
+    e = Player.create("E", rank="1d", seed_number=5)
+    tournament.players.extend([a, b, c, d, e])
+
+    tournament.rounds.extend(
+        [
+            _completed_round(
+                number=1,
+                games=[
+                    _completed_game(
+                        round_number=1,
+                        board_number=1,
+                        black_player_id=a.id,
+                        white_player_id=b.id,
+                        winner_player_id=a.id,
+                    ),
+                    _completed_game(
+                        round_number=1,
+                        board_number=2,
+                        black_player_id=c.id,
+                        white_player_id=d.id,
+                        winner_player_id=c.id,
+                    ),
+                    _bye_game(
+                        round_number=1,
+                        board_number=3,
+                        player_id=e.id,
+                    ),
+                ],
+            ),
+            _completed_round(
+                number=2,
+                games=[
+                    _completed_game(
+                        round_number=2,
+                        board_number=1,
+                        black_player_id=a.id,
+                        white_player_id=b.id,
+                        winner_player_id=a.id,
+                    ),
+                    _completed_game(
+                        round_number=2,
+                        board_number=2,
+                        black_player_id=d.id,
+                        white_player_id=c.id,
+                        winner_player_id=d.id,
+                    ),
+                    _bye_game(
+                        round_number=2,
+                        board_number=3,
+                        player_id=e.id,
+                    ),
+                ],
+            ),
+        ]
+    )
+
+    round_three = generate_next_round(tournament)
+
+    assert round_three.number == 3
+    assert [game.board_number for game in round_three.games] == [1, 2, 3]
+    repeated_pairs = {frozenset((a.id, b.id)), frozenset((c.id, d.id))}
+    assert {
+        frozenset((game.black_player_id, game.white_player_id))
+        for game in round_three.games
+        if game.result.result_type == "normal"
+    }.isdisjoint(repeated_pairs)
+
+
 def test_generate_later_round_orders_boards_by_score_group() -> None:
     tournament = Tournament.create("Example Weiqi Open", round_count=3)
     alice = Player.create("Alice", rank="8d", seed_number=1)
