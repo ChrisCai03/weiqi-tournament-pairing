@@ -9,6 +9,14 @@ from pairing.domain.config import TournamentConfig
 from pairing.domain.player import Player
 from pairing.domain.result import Result
 from pairing.domain.round import Round
+from pairing.domain.validation import (
+    TOURNAMENT_FORMATS,
+    TOURNAMENT_STATUSES,
+    require_choice,
+    require_non_blank,
+    require_positive,
+    require_unique,
+)
 
 
 SCHEMA_VERSION = 1
@@ -33,13 +41,13 @@ class Tournament:
     def create(cls, name: str, *, round_count: int = 5, format: str = "swiss") -> "Tournament":
         if round_count <= 0:
             raise ValueError("Round count must be positive.")
-        if format not in {"swiss", "mcmahon"}:
-            raise ValueError("Format must be 'swiss' or 'mcmahon'.")
+        normalized_name = require_non_blank(name, "Tournament name")
+        require_choice(format, TOURNAMENT_FORMATS, "tournament format")
 
         config = TournamentConfig(round_count=round_count, pairing_method=format)
         tournament = cls(
             id=str(uuid4()),
-            name=name.strip(),
+            name=normalized_name,
             game_type="go",
             format=format,
             status="draft",
@@ -159,6 +167,65 @@ class Tournament:
         )
         return stale_rounds
 
+    def validate(self) -> None:
+        require_non_blank(self.id, "Tournament id")
+        self.name = require_non_blank(self.name, "Tournament name")
+        require_choice(self.format, TOURNAMENT_FORMATS, "tournament format")
+        require_choice(self.status, TOURNAMENT_STATUSES, "tournament status")
+        self.config.validate()
+        if self.config.pairing_method != self.format:
+            raise ValueError("Tournament config pairing method must match tournament format.")
+
+        require_unique((player.id for player in self.players), "player id")
+        require_unique((round_obj.number for round_obj in self.rounds), "round number")
+        player_ids = {player.id for player in self.players}
+        seed_numbers: list[int] = []
+        game_ids: list[str] = []
+
+        for player in self.players:
+            require_non_blank(player.id, "Player id")
+            player.display_name = require_non_blank(player.display_name, "Player name")
+            require_positive(player.seed_number, "Player seed number")
+            seed_numbers.append(player.seed_number)
+        require_unique(seed_numbers, "player seed number")
+
+        for round_obj in self.rounds:
+            round_obj.validate()
+            game_ids.extend(game.id for game in round_obj.games)
+            appearances: set[str] = set()
+            for game in round_obj.games:
+                game_players = [
+                    player_id
+                    for player_id in (game.black_player_id, game.white_player_id)
+                    if player_id is not None
+                ]
+                for player_id in game_players:
+                    if player_id not in player_ids:
+                        raise ValueError(
+                            f"Round {round_obj.number} board {game.board_number} "
+                            f"references unknown player {player_id}."
+                        )
+                    if player_id in appearances:
+                        raise ValueError(
+                            f"Player {player_id} appears more than once in round "
+                            f"{round_obj.number}."
+                        )
+                    appearances.add(player_id)
+
+                if game.result.result_type == "bye":
+                    if len(game_players) != 1:
+                        raise ValueError("A bye must contain exactly one player.")
+                    if game.result.winner_player_id != game_players[0]:
+                        raise ValueError("Bye winner must be the player receiving the bye.")
+                else:
+                    if len(game_players) != 2 or game_players[0] == game_players[1]:
+                        raise ValueError("A normal game must contain two distinct players.")
+                    winner = game.result.winner_player_id
+                    if winner is not None and winner not in game_players:
+                        raise ValueError("Result winner must be one of the game players.")
+
+        require_unique(game_ids, "game id")
+
     def to_dict(self) -> dict[str, object]:
         return {
             "schema_version": self.schema_version,
@@ -180,7 +247,7 @@ class Tournament:
     @classmethod
     def from_dict(cls, data: dict[str, object]) -> "Tournament":
         tournament_data = dict(data["tournament"])  # type: ignore[arg-type]
-        return cls(
+        tournament = cls(
             id=str(tournament_data["id"]),
             name=str(tournament_data["name"]),
             game_type=str(tournament_data.get("game_type", "go")),
@@ -194,6 +261,8 @@ class Tournament:
             manual_overrides=[dict(item) for item in data.get("manual_overrides", [])],  # type: ignore[arg-type]
             audit_log=[AuditLogEntry.from_dict(dict(entry)) for entry in data.get("audit_log", [])],  # type: ignore[arg-type]
         )
+        tournament.validate()
+        return tournament
 
 
 def _utc_now_iso() -> str:

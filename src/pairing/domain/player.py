@@ -4,6 +4,8 @@ import re
 from dataclasses import asdict, dataclass
 from uuid import uuid4
 
+from pairing.domain.validation import PLAYER_STATUSES, require_choice, require_non_blank
+
 
 class RankParseError(ValueError):
     """Raised when a dan/kyu rank cannot be parsed."""
@@ -68,9 +70,10 @@ class Player:
         notes: str = "",
     ) -> "Player":
         parsed_rank = parse_rank(rank)
+        normalized_name = require_non_blank(display_name, "Player name")
         return cls(
             id=str(uuid4()),
-            display_name=display_name.strip(),
+            display_name=normalized_name,
             rank=parsed_rank.label,
             rank_sort_value=parsed_rank.sort_value,
             country=country.strip(),
@@ -88,6 +91,12 @@ class Player:
     def from_dict(cls, data: dict[str, object]) -> "Player":
         parsed_rank = parse_rank(str(data["rank"]))
         rank_sort_value = int(data["rank_sort_value"])
+        display_name = require_non_blank(str(data["display_name"]), "Player name")
+        status = require_choice(
+            str(data.get("status", "active")),
+            PLAYER_STATUSES,
+            "player status",
+        )
         if rank_sort_value != parsed_rank.sort_value:
             raise ValueError(
                 f"Inconsistent rank data for player {data['id']}: "
@@ -96,14 +105,14 @@ class Player:
 
         return cls(
             id=str(data["id"]),
-            display_name=str(data["display_name"]),
+            display_name=display_name,
             rank=parsed_rank.label,
             rank_sort_value=rank_sort_value,
             country=str(data.get("country", "")),
             club=str(data.get("club", "")),
             school=str(data.get("school", "")),
             team_id=str(data.get("team_id", "")),
-            status=str(data.get("status", "active")),
+            status=status,
             seed_number=int(data.get("seed_number", 0)),
             notes=str(data.get("notes", "")),
         )

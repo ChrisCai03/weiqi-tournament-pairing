@@ -4,6 +4,13 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
 from pairing.domain.game import Game
+from pairing.domain.validation import (
+    PAIRING_METHODS,
+    ROUND_STATUSES,
+    require_choice,
+    require_positive,
+    require_unique,
+)
 
 
 def _utc_now_iso() -> str:
@@ -59,12 +66,21 @@ class Round:
             "explanation_summary": list(self.explanation_summary),
         }
 
+    def validate(self) -> None:
+        require_positive(self.number, "Round number")
+        require_choice(self.status, ROUND_STATUSES, "round status")
+        require_choice(self.pairing_method, PAIRING_METHODS, "pairing method")
+        require_unique((game.id for game in self.games), "game id")
+        _validate_games(self.number, self.games)
+        for game in self.games:
+            game.validate()
+
     @classmethod
     def from_dict(cls, data: dict[str, object]) -> "Round":
         games = [Game.from_dict(dict(game)) for game in data.get("games", [])]
         number = int(data["number"])
         _validate_games(number, games)
-        return cls(
+        round_obj = cls(
             number=number,
             status=str(data["status"]),
             generated_at=str(data["generated_at"]),
@@ -76,6 +92,8 @@ class Round:
             supersedes_round_version=_optional_int(data.get("supersedes_round_version")),
             explanation_summary=[str(item) for item in data.get("explanation_summary", [])],
         )
+        round_obj.validate()
+        return round_obj
 
 
 def _optional_int(value: object) -> int | None:
@@ -97,6 +115,7 @@ def _parse_bool(value: object) -> bool:
 
 
 def _validate_games(number: int, games: list[Game]) -> None:
+    require_positive(number, "Round number")
     board_numbers = [game.board_number for game in games]
     if len(board_numbers) != len(set(board_numbers)):
         raise ValueError(f"Duplicate board number in round {number}.")

@@ -2,6 +2,18 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 
+from pairing.domain.player import parse_rank
+from pairing.domain.validation import (
+    AFFILIATION_POLICIES,
+    BYE_POLICIES,
+    COLOUR_POLICIES,
+    HANDICAP_POLICIES,
+    PAIRING_METHODS,
+    RANK_SYSTEMS,
+    TIEBREAKS,
+    require_choice,
+)
+
 
 def _parse_bool(value: object) -> bool:
     if isinstance(value, bool):
@@ -49,9 +61,27 @@ class TournamentConfig:
     def to_dict(self) -> dict[str, object]:
         return asdict(self)
 
+    def validate(self) -> None:
+        _parse_round_count(self.round_count)
+        require_choice(self.pairing_method, PAIRING_METHODS, "pairing method")
+        require_choice(self.rank_system, RANK_SYSTEMS, "rank system")
+        require_choice(self.colour_policy, COLOUR_POLICIES, "colour policy")
+        require_choice(self.bye_policy, BYE_POLICIES, "bye policy")
+        require_choice(self.handicap_policy, HANDICAP_POLICIES, "handicap policy")
+        require_choice(
+            self.affiliation_policy,
+            AFFILIATION_POLICIES,
+            "affiliation policy",
+        )
+        parse_rank(self.mcmahon_bar_rank)
+        if not self.tiebreak_order:
+            raise ValueError("tiebreak_order must not be empty")
+        for tiebreak in self.tiebreak_order:
+            require_choice(tiebreak, TIEBREAKS, "tiebreak")
+
     @classmethod
     def from_dict(cls, data: dict[str, object]) -> "TournamentConfig":
-        return cls(
+        config = cls(
             round_count=_parse_round_count(data.get("round_count", 5)),
             pairing_method=str(data.get("pairing_method", "swiss")),
             mcmahon_bar_rank=str(data.get("mcmahon_bar_rank", "1d")),
@@ -68,3 +98,5 @@ class TournamentConfig:
             tiebreak_order=_parse_tiebreak_order(data.get("tiebreak_order", ["score", "wins", "sos", "sosos"])),
             random_seed=int(data.get("random_seed", 1)),
         )
+        config.validate()
+        return config

@@ -4,6 +4,7 @@ from dataclasses import asdict, dataclass, field
 from uuid import uuid4
 
 from pairing.domain.result import Result
+from pairing.domain.validation import require_non_blank, require_positive
 
 
 @dataclass(slots=True)
@@ -49,9 +50,17 @@ class Game:
         payload["result"] = self.result.to_dict()
         return payload
 
+    def validate(self) -> None:
+        require_non_blank(self.id, "Game id")
+        require_positive(self.round_number, "Game round number")
+        require_positive(self.board_number, "Game board number")
+        if self.handicap < 0:
+            raise ValueError("Game handicap must not be negative.")
+        self.result.validate()
+
     @classmethod
     def from_dict(cls, data: dict[str, object]) -> "Game":
-        return cls(
+        game = cls(
             id=str(data["id"]),
             round_number=int(data["round_number"]),
             board_number=int(data["board_number"]),
@@ -63,6 +72,8 @@ class Game:
             pairing_explanation=[str(item) for item in data.get("pairing_explanation", [])],
             override_origin=str(data.get("override_origin", "engine")),
         )
+        game.validate()
+        return game
 
 
 def _optional_str(value: object) -> str | None:

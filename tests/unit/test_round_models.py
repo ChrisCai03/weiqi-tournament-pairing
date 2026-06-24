@@ -1,6 +1,7 @@
 import pytest
 
 from pairing.domain.game import Game
+from pairing.domain.player import Player
 from pairing.domain.result import Result
 from pairing.domain.round import Round
 from pairing.domain.tournament import Tournament
@@ -35,11 +36,14 @@ def test_round_round_trip() -> None:
 
 def test_tournament_rounds_round_trip() -> None:
     tournament = Tournament.create("Example Weiqi Open")
+    player_a = Player.create("Alice", rank="1d", seed_number=1)
+    player_b = Player.create("Bob", rank="1k", seed_number=2)
+    tournament.players.extend([player_a, player_b])
     game = Game.create(
         round_number=1,
         board_number=1,
-        black_player_id="player-a",
-        white_player_id="player-b",
+        black_player_id=player_a.id,
+        white_player_id=player_b.id,
         pairing_explanation=["Seeded opening pairing."],
     )
     tournament.rounds.append(

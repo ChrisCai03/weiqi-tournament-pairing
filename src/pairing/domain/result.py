@@ -3,6 +3,12 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 
+from pairing.domain.validation import (
+    RESULT_STATUSES,
+    RESULT_TYPES,
+    require_choice,
+)
+
 
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -45,9 +51,17 @@ class Result:
     def to_dict(self) -> dict[str, object]:
         return asdict(self)
 
+    def validate(self) -> None:
+        require_choice(self.status, RESULT_STATUSES, "result status")
+        require_choice(self.result_type, RESULT_TYPES, "result type")
+        if self.status == "pending" and self.result_type != "pending":
+            raise ValueError("Pending result status requires pending result type.")
+        if self.status == "completed" and self.result_type == "pending":
+            raise ValueError("Completed result status cannot use pending result type.")
+
     @classmethod
     def from_dict(cls, data: dict[str, object]) -> "Result":
-        return cls(
+        result = cls(
             status=str(data["status"]),
             result_type=str(data["result_type"]),
             winner_player_id=_optional_str(data.get("winner_player_id")),
@@ -56,6 +70,8 @@ class Result:
             notes=str(data.get("notes", "")),
             correction_of=_optional_str(data.get("correction_of")),
         )
+        result.validate()
+        return result
 
 
 def _optional_str(value: object) -> str | None:
