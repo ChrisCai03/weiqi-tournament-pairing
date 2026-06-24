@@ -16,6 +16,14 @@ def opponent_ids_by_player(tournament: Tournament) -> dict[str, list[str]]:
     return history
 
 
+def players_have_met(
+    opponent_history: dict[str, list[str]],
+    player_one_id: str,
+    player_two_id: str,
+) -> bool:
+    return player_two_id in opponent_history.get(player_one_id, [])
+
+
 def colour_history_by_player(tournament: Tournament) -> dict[str, list[str]]:
     history: dict[str, list[str]] = {player.id: [] for player in tournament.players}
     for round_obj in tournament.rounds:
