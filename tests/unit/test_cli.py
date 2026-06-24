@@ -3,8 +3,8 @@ import csv
 from pairing.cli.main import main
 from pairing.domain.player import Player
 from pairing.domain.tournament import Tournament
-from pairing.storage.json_store import save_tournament
 from pairing.storage.json_store import load_tournament
+from pairing.storage.json_store import save_tournament
 
 
 def test_cli_create_command(tmp_path):
@@ -94,3 +94,33 @@ def test_cli_import_players_missing_csv_returns_error(tmp_path, capsys):
     assert exit_code == 1
     assert captured.err.startswith("Error:")
     assert players_path.name in captured.err
+
+
+def test_cli_pair_round_creates_first_round(tmp_path, capsys):
+    tournament_path = tmp_path / "example.tgo.json"
+    tournament = Tournament.create("Example Weiqi Open")
+    tournament.players.extend(
+        [
+            Player.create("Alice", rank="4d", seed_number=1),
+            Player.create("Bob", rank="3d", seed_number=2),
+            Player.create("Charlie", rank="1d", seed_number=3),
+            Player.create("Diana", rank="1k", seed_number=4),
+            Player.create("Eve", rank="5k", seed_number=5),
+        ]
+    )
+    save_tournament(tournament, tournament_path)
+
+    exit_code = main(["pair-round", str(tournament_path)])
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert captured.out == "Paired round 1 with 3 games.\n"
+
+    loaded_tournament = load_tournament(tournament_path)
+    assert [round_obj.number for round_obj in loaded_tournament.rounds] == [1]
+    assert [game.board_number for game in loaded_tournament.rounds[0].games] == [1, 2, 3]
+    assert sum(
+        1
+        for game in loaded_tournament.rounds[0].games
+        if game.result.result_type == "bye"
+    ) == 1

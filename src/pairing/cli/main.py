@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 from pairing.domain.tournament import Tournament
+from pairing.engine.swiss import generate_next_round
 from pairing.import_export.csv_import import import_players_from_csv
 from pairing.storage import TournamentStoreError, load_tournament, save_tournament
 
@@ -21,6 +22,9 @@ def build_parser() -> argparse.ArgumentParser:
     import_parser = subparsers.add_parser("import-players", help="Import players from CSV.")
     import_parser.add_argument("tournament_path", help="Existing .tgo.json tournament file.")
     import_parser.add_argument("csv_path", help="Player CSV file.")
+
+    pair_round_parser = subparsers.add_parser("pair-round", help="Generate and append the next round.")
+    pair_round_parser.add_argument("tournament_path", help="Existing .tgo.json tournament file.")
 
     return parser
 
@@ -48,6 +52,14 @@ def main(argv: list[str] | None = None) -> int:
             tournament.add_players(report.players)
             save_tournament(tournament, Path(args.tournament_path))
             print(f"Imported {len(report.players)} players.")
+            return 0
+
+        if args.command == "pair-round":
+            tournament = load_tournament(Path(args.tournament_path))
+            round_obj = generate_next_round(tournament)
+            tournament.rounds.append(round_obj)
+            save_tournament(tournament, Path(args.tournament_path))
+            print(f"Paired round {round_obj.number} with {len(round_obj.games)} games.")
             return 0
     except (TournamentStoreError, OSError, ValueError) as exc:
         print(f"Error: {exc}", file=sys.stderr)

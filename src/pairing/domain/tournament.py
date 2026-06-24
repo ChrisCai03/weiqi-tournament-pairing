@@ -67,6 +67,9 @@ class Tournament:
             )
         )
 
+    def next_round_number(self) -> int:
+        return max((round_obj.number for round_obj in self.rounds), default=0) + 1
+
     def to_dict(self) -> dict[str, object]:
         return {
             "schema_version": self.schema_version,
