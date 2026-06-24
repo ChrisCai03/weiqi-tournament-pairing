@@ -1,12 +1,12 @@
 # Project Context
 
-This file is a lightweight handoff note for future sessions working on the Stage 3 McMahon branch.
+This file is a lightweight handoff note for future sessions working on the Stage 4 web branch.
 
 ## Repository
 
 - Main repo: `C:\Users\user\Documents\Pairing software dev`
-- Active Stage 3 worktree: `C:\Users\user\Documents\Pairing software dev\.worktrees\stage-3-mcmahon`
-- Stage 3 branch: `codex/stage-3-mcmahon`
+- Active Stage 4 worktree: `C:\Users\user\Documents\Pairing software dev\.worktrees\stage-4-web`
+- Stage 4 branch: `codex/stage-4-web`
 
 ## High-Level Product Direction
 
@@ -24,7 +24,8 @@ The current product path is:
 - Stage 1: data model, JSON storage, CSV import, CLI foundation
 - Stage 2: Swiss tournament workflow
 - Stage 3: McMahon tournament workflow
-- later: exports, UI, advanced workflows
+- Stage 4: local web console, CSV exports, public display page
+- later: PDF output, advanced workflows
 
 ## Key Design Documents
 
@@ -39,32 +40,26 @@ The current product path is:
 - Stage 3 implementation plan:
   - `docs/superpowers/plans/2026-06-24-stage-3-mcmahon.md`
 
-## Current Stage 3 Status
+## Current Stage 4 Status
 
 ### Completed
 
-- Stage 2 Swiss foundation merged into this worktree
-- Stage 3 planning/spec committed
-- McMahon format persistence complete:
-  - `Tournament.create(..., format="mcmahon")`
-  - `TournamentConfig.mcmahon_bar_rank`
-  - format round-trips through save/load
-- McMahon pairing core complete:
-  - shared pairing core extracted
-  - McMahon starting-score policy
-  - format-dispatched round generation
-  - McMahon-aware standings inputs and outputs
-- McMahon CLI workflow complete:
-  - `create --format mcmahon`
-  - `pair-round` dispatches by tournament format
-  - `standings` prints start/game/total columns
-  - McMahon pairings land with `pairing_method="mcmahon"`
+- Stage 2 Swiss foundation is merged in
+- Stage 3 McMahon workflow is merged in
+- Stage 4 web console is implemented:
+  - overview, players, pairings, results, standings, exports, display routes
+  - player CSV import form
+  - CSV export endpoints for players, pairings, results, standings
+  - public display page for boards
+- CLI now includes `web`:
+  - `pairing web <tournament_path> --host 127.0.0.1 --port 8000`
 
 ## Recent Verified State
 
 Current verified branch state:
 
-- full suite in the Stage 3 worktree passed after McMahon CLI wiring: `84 passed`
+- full suite in the Stage 4 worktree passed: `88 passed`
+- local browser smoke test passed against a demo tournament
 
 Useful verification commands:
 
@@ -77,6 +72,7 @@ python -m pytest
 
 Recent branch history:
 
+- `799a479` Refresh Stage 3 handoff notes
 - `6828f63` Expose McMahon CLI workflow
 - `d1a69e5` Add McMahon pairing core
 - `24198f3` Add McMahon format persistence
@@ -84,21 +80,14 @@ Recent branch history:
 - `d585780` Add Swiss regeneration and stale round handling
 - `07f85d9` Fix later round Swiss bye fallback
 - `e9b8da8` Add later round Swiss pairing
-- `12c95f4` Add later round Swiss pairing
-- `7c49b4e` Update Stage 2 branch context after slices C and D
-- `4e8cd5a` Harden result entry validation
-- `2c2e2c2` Add result entry workflow
-- `4edad1a` Harden Swiss round metadata and limits
-- `08385ec` Add first round Swiss pairing
-- `0b0214f` Ignore pending games in standings history
 
 ## Expected Next Steps
 
 The next planned work is:
 
-1. polish McMahon explanations and audit wording if needed
-2. refresh Stage 3 docs and branch notes if any wording drift remains
-3. move on to Stage 4 import/export hardening once McMahon is settled
+1. add PDF output or a simple print-friendly pairing sheet
+2. harden manual override and repair flows in the web UI
+3. split the web app into smaller modules once the interface settles
 
 ## Local Conventions Learned So Far
 
@@ -124,4 +113,4 @@ If a future session resumes here:
 1. open this file
 2. inspect `git log --oneline -8`
 3. run `python -m pytest`
-4. continue with the remaining Stage 3 cleanup or Stage 4 planning
+4. continue with Stage 4 polish or the next export/report slice

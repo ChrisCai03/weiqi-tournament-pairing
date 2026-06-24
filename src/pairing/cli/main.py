@@ -10,6 +10,7 @@ from pairing.engine.round_generation import generate_next_round
 from pairing.engine.standings import calculate_standings
 from pairing.import_export.csv_import import import_players_from_csv
 from pairing.storage import TournamentStoreError, load_tournament, save_tournament
+from pairing.web.server import serve_tournament
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -44,6 +45,11 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         help="Round number to keep as the regeneration boundary.",
     )
+
+    web_parser = subparsers.add_parser("web", help="Start the local web console.")
+    web_parser.add_argument("tournament_path", help="Existing .tgo.json tournament file.")
+    web_parser.add_argument("--host", default="127.0.0.1", help="Listen host.")
+    web_parser.add_argument("--port", type=int, default=8000, help="Listen port.")
 
     enter_result_parser = subparsers.add_parser("enter-result", help="Record a game result.")
     enter_result_parser.add_argument("tournament_path", help="Existing .tgo.json tournament file.")
@@ -136,6 +142,10 @@ def main(argv: list[str] | None = None) -> int:
             print(
                 f"Recorded {args.winner} win for round {args.round_number} board {args.board_number}."
             )
+            return 0
+
+        if args.command == "web":
+            serve_tournament(Path(args.tournament_path), host=args.host, port=args.port)
             return 0
     except (TournamentStoreError, OSError, ValueError) as exc:
         print(f"Error: {exc}", file=sys.stderr)

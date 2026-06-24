@@ -4,6 +4,8 @@ Open-source tournament pairing software for Weiqi/Go and related board games.
 
 The first prototype is a correctness-first Python CLI that stores tournaments as `.tgo.json` files and imports players from CSV.
 
+Stage 4 adds a local web console for the current tournament workflow, including players, pairings, results, standings, exports, and a public display page.
+
 ## Stage 1 Commands
 
 Create a tournament:
@@ -16,6 +18,12 @@ Import players:
 
 ```powershell
 $env:PYTHONPATH = "src"; python -m pairing.cli.main import-players example.tgo.json players.csv
+```
+
+Start the local web console:
+
+```powershell
+$env:PYTHONPATH = "src"; python -m pairing.cli.main web example.tgo.json --port 8000
 ```
 
 ## Documentation
