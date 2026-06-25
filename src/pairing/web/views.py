@@ -16,6 +16,7 @@ def _render_page(tournament: Tournament, title: str, content: str, *, active_tab
         ("results", "Results", "/results"),
         ("standings", "Standings", "/standings"),
         ("exports", "Exports", "/exports"),
+        ("reports", "Reports", "/reports"),
         ("display", "Display", "/display"),
     ]
     nav = "".join(
@@ -43,6 +44,7 @@ def _render_page(tournament: Tournament, title: str, content: str, *, active_tab
           .content {{ margin-top: 18px; display:grid; gap:16px; grid-template-columns: 1.5fr 0.9fr; }}
           .content.single {{ grid-template-columns: 1fr; }}
           .card {{ background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }}
+          .report-panel {{ grid-column: 1 / -1; }}
           .section-title {{ margin: 0 0 12px; font-size: 16px; }}
           .muted {{ color: var(--muted); font-size: 13px; }}
           table {{ width: 100%; border-collapse: collapse; font-size: 13px; }}
@@ -60,6 +62,23 @@ def _render_page(tournament: Tournament, title: str, content: str, *, active_tab
           .pill {{ display:inline-block; padding: 4px 8px; border-radius: 999px; background: #eef2ff; color: #4338ca; font-size: 12px; }}
           .error-box {{ background:#fff7ed; border:1px solid #fdba74; color:#9a3412; padding: 12px; border-radius: 10px; margin-bottom: 12px; }}
           .footer-note {{ margin-top:12px; color: var(--muted); font-size: 12px; }}
+          .report-header {{ display:flex; justify-content:space-between; gap:16px; align-items:flex-start; margin-bottom: 12px; }}
+          .report-header h2 {{ margin: 0 0 4px; }}
+          .report-toolbar {{ display:flex; gap: 8px; flex-wrap: wrap; }}
+          .report-link-grid {{ display:grid; gap:12px; grid-template-columns: repeat(3, minmax(0, 1fr)); }}
+          .report-link {{ border:1px solid var(--line); border-radius: 10px; padding: 12px; background: #fbfdff; text-decoration:none; color: inherit; }}
+          .report-link strong {{ display:block; margin-bottom: 4px; }}
+          .report-link span {{ color: var(--muted); font-size: 12px; }}
+          .report-note {{ margin: 10px 0 0; color: var(--muted); font-size: 12px; }}
+          @media print {{
+            body {{ background: #fff; }}
+            .shell {{ max-width: none; padding: 0; }}
+            .topbar, .tabs, .no-print {{ display: none !important; }}
+            .content {{ margin-top: 0; grid-template-columns: 1fr; }}
+            .card {{ border: none; border-radius: 0; padding: 0; }}
+            .report-panel {{ grid-column: 1 / -1; }}
+            table {{ font-size: 11px; }}
+          }}
         </style>
       </head>
       <body>
@@ -249,6 +268,42 @@ def _render_exports_section() -> str:
     """
 
 
+def _render_reports_section(tournament: Tournament) -> str:
+    current_round = _current_round(tournament)
+    round_label = f"Round {current_round.number}" if current_round else "No active round"
+    return f"""
+    <div class="card report-panel">
+      <h2 class="section-title">Print-friendly reports</h2>
+      <div class="report-header">
+        <div>
+          <div class="muted">Current state</div>
+          <p>{escape(round_label)}</p>
+          <p class="report-note">These pages are designed to print cleanly from the browser and can later become PDF exports.</p>
+        </div>
+      </div>
+      <div class="report-link-grid">
+        <a class="report-link" href="/reports/pairings">
+          <strong>Pairings report</strong>
+          <span>Current round board list with explanations.</span>
+        </a>
+        <a class="report-link" href="/reports/results">
+          <strong>Results report</strong>
+          <span>Round-by-round result sheet for directors.</span>
+        </a>
+        <a class="report-link" href="/reports/standings">
+          <strong>Standings report</strong>
+          <span>Current rankings with tie-break columns.</span>
+        </a>
+      </div>
+      <div class="actions no-print" style="margin-top: 16px;">
+        <a class="button" href="/exports">CSV exports</a>
+        <a class="button" href="/pairings">Pairings console</a>
+        <a class="button" href="/standings">Standings console</a>
+      </div>
+    </div>
+    """
+
+
 def _render_public_display(tournament: Tournament) -> str:
     current_round = _current_round(tournament)
     if current_round is None:
@@ -265,6 +320,120 @@ def _render_public_display(tournament: Tournament) -> str:
         </div>
         """
     return _render_page(tournament, "Public Display", body, active_tab="display")
+
+
+def _render_pairings_report(tournament: Tournament) -> str:
+    current_round = _current_round(tournament)
+    if current_round is None:
+        return """
+        <div class="card report-panel">
+          <div class="report-header">
+            <div>
+              <h2 class="section-title">Pairings Report</h2>
+              <p class="muted">No pairings yet.</p>
+            </div>
+          </div>
+        </div>
+        """
+    else:
+        rows = "".join(
+            f"<tr><td>{game.board_number}</td><td>{_player_label(tournament, game.black_player_id)}</td><td>{_player_label(tournament, game.white_player_id)}</td><td>{escape(game.result.result_type)}</td><td>{escape(current_round.explanation_summary[0] if current_round.explanation_summary else '')}</td></tr>"
+            for game in current_round.games
+        )
+        return f"""
+        <div class="card report-panel">
+          <div class="report-header no-print">
+            <div>
+              <h2 class="section-title">Pairings Report</h2>
+              <p class="muted">Round {current_round.number} print view.</p>
+            </div>
+            <div class="report-toolbar">
+              <button class="button primary" type="button" onclick="window.print()">Print pairings</button>
+              <a class="button" href="/reports">Back to reports</a>
+            </div>
+          </div>
+          <table>
+            <thead><tr><th>Board</th><th>Black</th><th>White</th><th>Result</th><th>Explanation</th></tr></thead>
+            <tbody>{rows}</tbody>
+          </table>
+        </div>
+        """
+
+
+def _render_results_report(tournament: Tournament) -> str:
+    current_round = _current_round(tournament)
+    if current_round is None:
+        return """
+        <div class="card report-panel">
+          <div class="report-header">
+            <div>
+              <h2 class="section-title">Results Report</h2>
+              <p class="muted">Generate a round first to see a printable result sheet.</p>
+            </div>
+            <div class="report-toolbar no-print">
+              <a class="button" href="/reports">Back to reports</a>
+            </div>
+          </div>
+        </div>
+        """
+    else:
+        rows = "".join(
+            f"<tr><td>{game.board_number}</td><td>{_player_label(tournament, game.black_player_id)}</td><td>{_player_label(tournament, game.white_player_id)}</td><td>{escape(game.result.result_type)}</td></tr>"
+            for game in current_round.games
+        )
+        return f"""
+        <div class="card report-panel">
+          <div class="report-header no-print">
+            <div>
+              <h2 class="section-title">Results Report</h2>
+              <p class="muted">Round {current_round.number} print view.</p>
+            </div>
+            <div class="report-toolbar">
+              <button class="button primary" type="button" onclick="window.print()">Print results</button>
+              <a class="button" href="/reports">Back to reports</a>
+            </div>
+          </div>
+          <table>
+            <thead><tr><th>Board</th><th>Black</th><th>White</th><th>Status</th></tr></thead>
+            <tbody>{rows}</tbody>
+          </table>
+        </div>
+        """
+
+
+def _render_standings_report(tournament: Tournament) -> str:
+    standings = calculate_standings(
+        tournament,
+        starting_score_provider=(
+            lambda player: (
+                mcmahon_starting_score(player, tournament)
+                if tournament.format == "mcmahon"
+                else 0.0
+            )
+        ),
+    )
+    rows = "".join(
+        f"<tr><td>{index}</td><td>{escape(entry.player.display_name)}</td><td>{entry.starting_score:.1f}</td><td>{entry.game_score:.1f}</td><td>{entry.score:.1f}</td><td>{entry.wins}</td><td>{entry.losses}</td><td>{entry.sos:.1f}</td><td>{entry.sosos:.1f}</td></tr>"
+        for index, entry in enumerate(standings, start=1)
+    )
+    return f"""
+    <div class="card report-panel">
+      <div class="report-header no-print">
+        <div>
+          <h2 class="section-title">Standings Report</h2>
+          <p class="muted">Current rankings with tie-break columns.</p>
+        </div>
+        <div class="report-toolbar">
+          <button class="button primary" type="button" onclick="window.print()">Print standings</button>
+          <a class="button" href="/reports">Back to reports</a>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>Pos</th><th>Player</th><th>Start</th><th>Game</th><th>Total</th><th>W</th><th>L</th><th>SOS</th><th>SOSOS</th></tr></thead>
+        <tbody>{rows or '<tr><td colspan="9" class="muted">No standings yet</td></tr>'}</tbody>
+      </table>
+    </div>
+    """
 
 
 def _render_display_row(tournament: Tournament, game: Game) -> str:

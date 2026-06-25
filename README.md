@@ -32,6 +32,8 @@ pairing web demo.tgo.json --port 8000 --open-browser
 
 The web server remains attached to the managing terminal. Stop it with
 `Ctrl+C`. Without `--open-browser`, open `http://127.0.0.1:8000/`.
+The web UI now includes a `Reports` area with print-friendly pairings,
+results, and standings pages for browser print/PDF workflows.
 
 ## Tournament Workflow
 
@@ -72,6 +74,7 @@ Supported:
 - result entry and correction
 - auditable downstream regeneration
 - local CLI and server-rendered web UI
+- print-friendly report pages for pairings, results, and standings
 
 Reserved for later work:
 

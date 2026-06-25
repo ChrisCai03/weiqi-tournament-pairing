@@ -114,6 +114,51 @@ def test_web_standings_csv_export_contains_headers(tmp_path) -> None:
     assert "Alice" in body
 
 
+def test_web_reports_hub_lists_print_friendly_views(tmp_path) -> None:
+    tournament_path = tmp_path / "example.tgo.json"
+    tournament = Tournament.create("Example Weiqi Open")
+    tournament.players.extend(
+        [
+            Player.create("Alice", rank="4d", seed_number=1),
+            Player.create("Bob", rank="3d", seed_number=2),
+        ]
+    )
+    save_tournament(tournament, tournament_path)
+
+    status, headers, body = _call_app(create_web_app(tournament_path), "GET", "/reports")
+
+    assert status.startswith("200")
+    assert headers["Content-Type"].startswith("text/html")
+    assert "Print-friendly reports" in body
+    assert "/reports/pairings" in body
+    assert "/reports/results" in body
+    assert "/reports/standings" in body
+
+
+def test_web_pairings_print_report_renders_current_round(tmp_path) -> None:
+    tournament_path = tmp_path / "example.tgo.json"
+    tournament = Tournament.create("Example Weiqi Open")
+    tournament.players.extend(
+        [
+            Player.create("Alice", rank="4d", seed_number=1),
+            Player.create("Bob", rank="3d", seed_number=2),
+            Player.create("Charlie", rank="1d", seed_number=3),
+            Player.create("Diana", rank="1k", seed_number=4),
+        ]
+    )
+    tournament.rounds.append(generate_next_round(tournament))
+    save_tournament(tournament, tournament_path)
+
+    status, headers, body = _call_app(create_web_app(tournament_path), "GET", "/reports/pairings")
+
+    assert status.startswith("200")
+    assert headers["Content-Type"].startswith("text/html")
+    assert "Print pairings" in body
+    assert "Pairings Report" in body
+    assert "Board" in body
+    assert "Explanation" in body
+
+
 def _call_app(app, method: str, path: str, body: str = ""):
     environ = {}
     setup_testing_defaults(environ)

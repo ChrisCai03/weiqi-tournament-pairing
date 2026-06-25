@@ -53,3 +53,12 @@ preferences, handicap, SODOS, expanded McMahon bands, PDF, and multi-user use.
 
 All twelve success criteria in the repository rehabilitation design are
 satisfied. The branch is ready for review and integration into `main`.
+
+## 2026-06-25 â€” Stage 5 print-friendly report slice
+
+- Added a `Reports` hub to the local web app
+- Added print-friendly pairings, results, and standings report pages
+- Added browser-print affordances for future PDF workflows
+- Verified the new report routes in Chrome against a sample tournament
+- Tests: focused web route tests and the full suite passed after the report
+  addition

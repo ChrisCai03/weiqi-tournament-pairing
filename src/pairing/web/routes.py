@@ -12,6 +12,10 @@ GET_ROUTES = {
     "/results": ("Results", "results", views._render_results_section),
     "/standings": ("Standings", "standings", views._render_standings_section),
     "/exports": ("Exports", "exports", lambda _tournament: views._render_exports_section()),
+    "/reports": ("Reports", "reports", views._render_reports_section),
+    "/reports/pairings": ("Pairings Report", "reports", views._render_pairings_report),
+    "/reports/results": ("Results Report", "reports", views._render_results_report),
+    "/reports/standings": ("Standings Report", "reports", views._render_standings_report),
 }
 CSV_ROUTES = {
     "/exports/players.csv": ("players", "players.csv"),
