@@ -5,7 +5,7 @@ from collections import Counter
 from pathlib import Path
 
 from pairing.application import TournamentService
-from pairing.storage import load_tournament
+from pairing.storage import load_tournament, save_tournament
 
 
 def test_realistic_open_fixture_import_survives_reload(tmp_path) -> None:
@@ -68,9 +68,17 @@ def test_complete_five_round_swiss_realistic_open_trial(tmp_path) -> None:
         tmp_path,
         name="Realistic Swiss Trial",
         format="swiss",
+        filename_suffix="a",
     )
+    transcript = _play_complete_trial(service, rounds=5)
 
-    _play_complete_trial(service, rounds=5)
+    _, second_service = _create_imported_tournament(
+        tmp_path,
+        name="Realistic Swiss Trial",
+        format="swiss",
+        filename_suffix="b",
+    )
+    second_transcript = _play_complete_trial(second_service, rounds=5)
 
     loaded = load_tournament(tournament_path)
     standings = service.standings()
@@ -82,7 +90,12 @@ def test_complete_five_round_swiss_realistic_open_trial(tmp_path) -> None:
     assert len(standings) == 32
     assert sum(event.event_type == "round_pairings_generated" for event in loaded.audit_log) == 5
     assert sum(event.event_type == "result_entered" for event in loaded.audit_log) == 80
-    assert service.load().to_dict() == load_tournament(tournament_path).to_dict()
+    assert transcript == second_transcript
+
+    final_state = loaded.to_dict()
+    snapshot_path = tmp_path / "swiss-realistic-open-snapshot.tgo.json"
+    save_tournament(loaded, snapshot_path)
+    assert load_tournament(snapshot_path).to_dict() == final_state
 
     _assert_csv_report(
         service,
@@ -125,9 +138,17 @@ def test_complete_five_round_mcmahon_realistic_open_trial(tmp_path) -> None:
         tmp_path,
         name="Realistic McMahon Trial",
         format="mcmahon",
+        filename_suffix="a",
     )
+    transcript = _play_complete_trial(service, rounds=5)
 
-    _play_complete_trial(service, rounds=5)
+    _, second_service = _create_imported_tournament(
+        tmp_path,
+        name="Realistic McMahon Trial",
+        format="mcmahon",
+        filename_suffix="b",
+    )
+    second_transcript = _play_complete_trial(second_service, rounds=5)
 
     loaded = load_tournament(tournament_path)
     standings = service.standings()
@@ -135,9 +156,15 @@ def test_complete_five_round_mcmahon_realistic_open_trial(tmp_path) -> None:
     assert len(loaded.rounds) == 5
     assert all(round_obj.pairing_method == "mcmahon" for round_obj in loaded.rounds)
     assert all(round_obj.status == "completed" for round_obj in loaded.rounds)
+    assert all(len(round_obj.games) == 16 for round_obj in loaded.rounds)
     assert len(standings) == 32
+    assert transcript == second_transcript
 
     _assert_mcmahon_starting_and_game_scores(loaded, standings)
+    final_state = loaded.to_dict()
+    snapshot_path = tmp_path / "mcmahon-realistic-open-snapshot.tgo.json"
+    save_tournament(loaded, snapshot_path)
+    assert load_tournament(snapshot_path).to_dict() == final_state
     _assert_csv_report(
         service,
         "players",
@@ -183,8 +210,10 @@ def _create_imported_tournament(
     *,
     name: str,
     format: str,
+    filename_suffix: str = "",
 ) -> tuple[Path, TournamentService]:
-    tournament_path = tmp_path / f"{format}-realistic-open.tgo.json"
+    suffix = f"-{filename_suffix}" if filename_suffix else ""
+    tournament_path = tmp_path / f"{format}-realistic-open{suffix}.tgo.json"
     TournamentService.create(
         tournament_path,
         name=name,
@@ -199,9 +228,11 @@ def _create_imported_tournament(
     return tournament_path, service
 
 
-def _play_complete_trial(service: TournamentService, *, rounds: int) -> None:
+def _play_complete_trial(service: TournamentService, *, rounds: int) -> tuple[tuple[dict[str, object], ...], ...]:
     bye_counts: Counter[str] = Counter()
+    opponent_pairs: set[frozenset[str]] = set()
     next_winner = "black"
+    transcript: list[tuple[dict[str, object], ...]] = []
 
     for round_number in range(1, rounds + 1):
         outcome = service.generate_next_round(actor="test")
@@ -209,37 +240,71 @@ def _play_complete_trial(service: TournamentService, *, rounds: int) -> None:
 
         tournament = _reload_canonical(service)
         round_obj = tournament.get_round(round_number)
-        _assert_round_invariants(tournament, round_obj, bye_counts)
+        _assert_round_invariants(tournament, round_obj, bye_counts, opponent_pairs)
+        round_transcript: list[dict[str, object]] = []
 
         for game in round_obj.games:
             if game.result.result_type == "bye":
                 assert game.result.status == "completed"
+                round_transcript.append(
+                    _normalize_game_transcript(
+                        tournament,
+                        game,
+                        winner_side=None,
+                    )
+                )
                 continue
 
+            chosen_winner_side = next_winner
             service.record_result(
                 round_number=round_number,
                 board_number=game.board_number,
-                winner=next_winner,
+                winner=chosen_winner_side,
                 actor="test",
             )
             next_winner = "white" if next_winner == "black" else "black"
 
             tournament = _reload_canonical(service)
             persisted_game = tournament.get_game(round_number, game.board_number)
+            expected_winner_player_id = (
+                persisted_game.black_player_id
+                if chosen_winner_side == "black"
+                else persisted_game.white_player_id
+            )
             assert persisted_game.result.status == "completed"
+            assert persisted_game.result.result_type == "normal"
+            assert persisted_game.result.winner_player_id == expected_winner_player_id
+            assert persisted_game.result.entered_by == "test"
+            assert persisted_game.result.entered_at
+            round_transcript.append(
+                _normalize_game_transcript(
+                    tournament,
+                    persisted_game,
+                    winner_side=chosen_winner_side,
+                )
+            )
 
         assert _reload_canonical(service).get_round(round_number).status == "completed"
+        transcript.append(tuple(round_transcript))
+
+    return tuple(transcript)
 
 
 def _reload_canonical(service: TournamentService):
     return load_tournament(service.path)
 
 
-def _assert_round_invariants(tournament, round_obj, bye_counts: Counter[str]) -> None:
+def _assert_round_invariants(
+    tournament,
+    round_obj,
+    bye_counts: Counter[str],
+    opponent_pairs: set[frozenset[str]],
+) -> None:
     assert [game.board_number for game in round_obj.games] == list(
         range(1, len(round_obj.games) + 1)
     )
 
+    player_names = {player.id: player.display_name for player in tournament.players}
     player_ids = [
         player_id
         for game in round_obj.games
@@ -255,6 +320,41 @@ def _assert_round_invariants(tournament, round_obj, bye_counts: Counter[str]) ->
     for game in bye_games:
         bye_counts[game.result.winner_player_id] += 1
         assert bye_counts[game.result.winner_player_id] == 1
+
+    for game in round_obj.games:
+        if game.white_player_id is None:
+            continue
+        opponent_pair = frozenset(
+            {
+                player_names[game.black_player_id],
+                player_names[game.white_player_id],
+            }
+        )
+        assert opponent_pair not in opponent_pairs
+        opponent_pairs.add(opponent_pair)
+
+
+def _normalize_game_transcript(
+    tournament,
+    game,
+    *,
+    winner_side: str | None,
+) -> dict[str, object]:
+    player_names = {player.id: player.display_name for player in tournament.players}
+    winner_name = (
+        player_names[game.result.winner_player_id]
+        if game.result.winner_player_id is not None
+        else None
+    )
+    return {
+        "round": game.round_number,
+        "board": game.board_number,
+        "black": player_names[game.black_player_id],
+        "white": player_names[game.white_player_id] if game.white_player_id is not None else None,
+        "result_type": game.result.result_type,
+        "winner_side": winner_side,
+        "winner_name": winner_name,
+    }
 
 
 def _assert_csv_report(
