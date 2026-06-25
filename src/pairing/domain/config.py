@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
+from typing import Final
 
 from pairing.domain.player import parse_rank
 from pairing.domain.validation import (
@@ -12,6 +13,22 @@ from pairing.domain.validation import (
     RANK_SYSTEMS,
     TIEBREAKS,
     require_choice,
+    require_finite_number,
+    require_positive,
+)
+
+_DEFAULT_TIEBREAK_ORDER: Final[list[str]] = ["score", "wins", "sos", "sosos"]
+_SCORE_FIELD_LABELS: Final[tuple[tuple[str, str], ...]] = (
+    ("score_win", "Win score"),
+    ("score_loss", "Loss score"),
+    ("score_draw", "Draw score"),
+    ("score_bye", "Bye score"),
+    ("score_both_win", "Both-win score"),
+    ("score_both_loss", "Both-loss score"),
+    ("score_forfeit_win", "Forfeit win score"),
+    ("score_forfeit_loss", "Forfeit loss score"),
+    ("score_no_show", "No-show score"),
+    ("late_entry_missed_round_score", "Late-entry missed-round score"),
 )
 
 
@@ -49,13 +66,24 @@ class TournamentConfig:
     score_loss: float = 0.0
     score_draw: float = 0.5
     score_bye: float = 1.0
+    score_both_win: float = 1.0
+    score_both_loss: float = 0.0
+    score_forfeit_win: float = 1.0
+    score_forfeit_loss: float = 0.0
+    score_no_show: float = 0.0
+    late_entry_missed_round_score: float = 0.0
     allow_draws: bool = False
+    count_both_win_as_played: bool = True
+    count_both_loss_as_played: bool = True
+    count_void_as_played: bool = False
+    automatic_backup_before_destructive_change: bool = True
+    backup_retention_count: int = 10
     rank_system: str = "dan_kyu"
     colour_policy: str = "balanced"
     bye_policy: str = "lowest_score_no_previous_bye"
     handicap_policy: str = "none"
     affiliation_policy: str = "avoid_when_possible"
-    tiebreak_order: list[str] = field(default_factory=lambda: ["score", "wins", "sos", "sosos"])
+    tiebreak_order: list[str] = field(default_factory=lambda: list(_DEFAULT_TIEBREAK_ORDER))
     random_seed: int = 1
 
     def to_dict(self) -> dict[str, object]:
@@ -76,6 +104,9 @@ class TournamentConfig:
         bar_rank = parse_rank(self.mcmahon_bar_rank)
         if bar_rank.label == "unranked":
             raise ValueError("McMahon bar rank must be ranked.")
+        for field_name, label in _SCORE_FIELD_LABELS:
+            require_finite_number(float(getattr(self, field_name)), label)
+        require_positive(self.backup_retention_count, "Backup retention count")
         if not self.tiebreak_order:
             raise ValueError("tiebreak_order must not be empty")
         for tiebreak in self.tiebreak_order:
@@ -91,14 +122,27 @@ class TournamentConfig:
             score_loss=float(data.get("score_loss", 0.0)),
             score_draw=float(data.get("score_draw", 0.5)),
             score_bye=float(data.get("score_bye", 1.0)),
+            score_both_win=float(data.get("score_both_win", 1.0)),
+            score_both_loss=float(data.get("score_both_loss", 0.0)),
+            score_forfeit_win=float(data.get("score_forfeit_win", 1.0)),
+            score_forfeit_loss=float(data.get("score_forfeit_loss", 0.0)),
+            score_no_show=float(data.get("score_no_show", 0.0)),
+            late_entry_missed_round_score=float(data.get("late_entry_missed_round_score", 0.0)),
             allow_draws=_parse_bool(data.get("allow_draws", False)),
+            count_both_win_as_played=_parse_bool(data.get("count_both_win_as_played", True)),
+            count_both_loss_as_played=_parse_bool(data.get("count_both_loss_as_played", True)),
+            count_void_as_played=_parse_bool(data.get("count_void_as_played", False)),
+            automatic_backup_before_destructive_change=_parse_bool(
+                data.get("automatic_backup_before_destructive_change", True)
+            ),
+            backup_retention_count=int(data.get("backup_retention_count", 10)),
             rank_system=str(data.get("rank_system", "dan_kyu")),
             colour_policy=str(data.get("colour_policy", "balanced")),
             bye_policy=str(data.get("bye_policy", "lowest_score_no_previous_bye")),
             handicap_policy=str(data.get("handicap_policy", "none")),
             affiliation_policy=str(data.get("affiliation_policy", "avoid_when_possible")),
             tiebreak_order=_parse_tiebreak_order(
-                data.get("tiebreak_order", ["score", "wins", "sos", "sosos"])
+                data.get("tiebreak_order", list(_DEFAULT_TIEBREAK_ORDER))
             ),
             random_seed=int(data.get("random_seed", 1)),
         )

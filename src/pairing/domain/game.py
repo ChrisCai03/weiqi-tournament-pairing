@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from uuid import uuid4
 
+from pairing.domain.config import TournamentConfig
 from pairing.domain.result import Result
 from pairing.domain.validation import require_non_blank, require_positive
 
@@ -59,7 +60,19 @@ class Game:
         self.result.validate()
 
     @classmethod
-    def from_dict(cls, data: dict[str, object]) -> "Game":
+    def from_dict(
+        cls,
+        data: dict[str, object],
+        *,
+        config: TournamentConfig | None = None,
+    ) -> "Game":
+        result = Result.from_dict(dict(data["result"]))
+        if config is not None:
+            result = result.with_game_context(
+                black_player_id=_optional_str(data.get("black_player_id")),
+                white_player_id=_optional_str(data.get("white_player_id")),
+                config=config,
+            )
         game = cls(
             id=str(data["id"]),
             round_number=int(data["round_number"]),
@@ -68,7 +81,7 @@ class Game:
             white_player_id=_optional_str(data.get("white_player_id")),
             handicap=int(data.get("handicap", 0)),
             komi=float(data.get("komi", 0.0)),
-            result=Result.from_dict(dict(data["result"])),
+            result=result,
             pairing_explanation=[str(item) for item in data.get("pairing_explanation", [])],
             override_origin=str(data.get("override_origin", "engine")),
         )

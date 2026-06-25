@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from collections.abc import Hashable, Iterable
 
 TOURNAMENT_FORMATS = frozenset({"swiss", "mcmahon"})
@@ -7,7 +8,25 @@ TOURNAMENT_STATUSES = frozenset({"draft", "active", "completed"})
 PLAYER_STATUSES = frozenset({"active", "withdrawn"})
 ROUND_STATUSES = frozenset({"draft", "published", "completed", "stale"})
 RESULT_STATUSES = frozenset({"pending", "completed"})
-RESULT_TYPES = frozenset({"pending", "normal", "bye"})
+RESULT_TYPES = frozenset(
+    {"pending", "normal", "draw", "both_win", "both_loss", "forfeit", "no_show", "bye", "void"}
+)
+RESULT_OUTCOME_CODES = frozenset(
+    {
+        "black_win",
+        "white_win",
+        "draw",
+        "both_win",
+        "both_loss",
+        "black_forfeit",
+        "white_forfeit",
+        "black_no_show",
+        "white_no_show",
+        "both_no_show",
+        "bye",
+        "void",
+    }
+)
 PAIRING_METHODS = frozenset({"swiss", "mcmahon"})
 RANK_SYSTEMS = frozenset({"dan_kyu"})
 COLOUR_POLICIES = frozenset({"balanced"})
@@ -33,6 +52,12 @@ def require_choice(value: str, choices: frozenset[str], label: str) -> str:
 def require_positive(value: int, label: str) -> int:
     if value <= 0:
         raise ValueError(f"{label} must be positive.")
+    return value
+
+
+def require_finite_number(value: float, label: str) -> float:
+    if not math.isfinite(value):
+        raise ValueError(f"{label} must be finite.")
     return value
 
 

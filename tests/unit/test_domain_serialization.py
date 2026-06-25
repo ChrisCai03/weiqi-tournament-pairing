@@ -2,7 +2,10 @@ import pytest
 
 from pairing.domain.audit import AuditLogEntry
 from pairing.domain.config import TournamentConfig
+from pairing.domain.game import Game
 from pairing.domain.player import Player
+from pairing.domain.result import Result
+from pairing.domain.tournament import Tournament
 
 
 def test_tournament_config_from_dict_parses_bool_values() -> None:
@@ -64,3 +67,135 @@ def test_player_from_dict_rejects_inconsistent_rank_sort_value() -> None:
                 "rank_sort_value": -3,
             }
         )
+
+
+def test_tournament_config_round_trip_preserves_result_outcome_defaults() -> None:
+    restored = TournamentConfig.from_dict(TournamentConfig().to_dict())
+
+    assert restored.score_both_win == 1.0
+    assert restored.score_both_loss == 0.0
+    assert restored.score_forfeit_win == 1.0
+    assert restored.score_forfeit_loss == 0.0
+    assert restored.score_no_show == 0.0
+    assert restored.late_entry_missed_round_score == 0.0
+    assert restored.count_both_win_as_played is True
+    assert restored.count_both_loss_as_played is True
+    assert restored.count_void_as_played is False
+    assert restored.automatic_backup_before_destructive_change is True
+    assert restored.backup_retention_count == 10
+
+
+@pytest.mark.parametrize(
+    ("field_name", "field_value"),
+    [
+        ("score_win", float("inf")),
+        ("score_loss", float("-inf")),
+        ("score_draw", float("nan")),
+        ("score_bye", float("inf")),
+        ("score_both_win", float("inf")),
+        ("score_both_loss", float("inf")),
+        ("score_forfeit_win", float("inf")),
+        ("score_forfeit_loss", float("inf")),
+        ("score_no_show", float("inf")),
+        ("late_entry_missed_round_score", float("inf")),
+    ],
+)
+def test_tournament_config_from_dict_rejects_non_finite_scores(
+    field_name: str, field_value: float
+) -> None:
+    with pytest.raises(ValueError, match="must be finite"):
+        TournamentConfig.from_dict({field_name: field_value})
+
+
+@pytest.mark.parametrize("backup_retention_count", [0, -1])
+def test_tournament_config_from_dict_rejects_non_positive_backup_retention_count(
+    backup_retention_count: int,
+) -> None:
+    with pytest.raises(ValueError, match="positive"):
+        TournamentConfig.from_dict({"backup_retention_count": backup_retention_count})
+
+
+def test_result_from_dict_preserves_legacy_completed_shape_without_scores() -> None:
+    result = Result.from_dict(
+        {
+            "status": "completed",
+            "result_type": "normal",
+            "winner_player_id": "player-black",
+        }
+    )
+
+    assert result.outcome_code is None
+    assert result.black_score is None
+    assert result.white_score is None
+
+
+def test_game_from_dict_normalizes_legacy_result_when_config_is_supplied() -> None:
+    game = Game.from_dict(
+        {
+            "id": "game-1",
+            "round_number": 1,
+            "board_number": 1,
+            "black_player_id": "player-black",
+            "white_player_id": "player-white",
+            "result": {
+                "status": "completed",
+                "result_type": "normal",
+                "winner_player_id": "player-black",
+            },
+            "pairing_explanation": [],
+        },
+        config=TournamentConfig(),
+    )
+
+    assert game.result.outcome_code == "black_win"
+    assert game.result.black_score == 1.0
+    assert game.result.white_score == 0.0
+
+
+def test_tournament_from_dict_loads_legacy_completed_results_without_scores() -> None:
+    tournament = Tournament.create("Legacy Open")
+    player_black = Player.create("Black", rank="1d", seed_number=1)
+    player_white = Player.create("White", rank="1k", seed_number=2)
+    tournament.players.extend([player_black, player_white])
+
+    payload = tournament.to_dict()
+    payload["rounds"] = [
+        {
+            "number": 1,
+            "status": "completed",
+            "generated_at": "2026-06-25T00:00:00+00:00",
+            "completed_at": "2026-06-25T01:00:00+00:00",
+            "pairing_method": "swiss",
+            "pairing_seed": 1,
+            "games": [
+                {
+                    "id": "legacy-game-1",
+                    "round_number": 1,
+                    "board_number": 1,
+                    "black_player_id": player_black.id,
+                    "white_player_id": player_white.id,
+                    "handicap": 0,
+                    "komi": 0.0,
+                    "result": {
+                        "status": "completed",
+                        "result_type": "normal",
+                        "winner_player_id": player_black.id,
+                        "entered_by": "cli",
+                        "notes": "",
+                        "correction_of": None,
+                    },
+                    "pairing_explanation": [],
+                    "override_origin": "engine",
+                }
+            ],
+            "is_regenerated": False,
+            "supersedes_round_version": None,
+            "explanation_summary": [],
+        }
+    ]
+
+    restored = Tournament.from_dict(payload)
+
+    assert restored.rounds[0].games[0].result.result_type == "normal"
+    assert restored.rounds[0].games[0].result.winner_player_id == player_black.id
+    assert restored.rounds[0].games[0].result.black_score is None
