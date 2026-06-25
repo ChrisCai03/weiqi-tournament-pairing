@@ -25,9 +25,7 @@ def test_realistic_open_fixture_import_survives_reload(tmp_path) -> None:
         actor="test",
     )
     assert import_outcome.imported_count == 32
-
-    loaded = load_tournament(tournament_path)
-    assert len(loaded.players) == 32
+    assert import_outcome.warnings == ()
 
     reloaded = load_tournament(tournament_path)
     assert len(reloaded.players) == 32
@@ -53,3 +51,11 @@ def test_realistic_open_fixture_import_survives_reload(tmp_path) -> None:
     assert by_name["Mina Okada"].country == "Canada"
     assert by_name["Mina Okada"].club == "Toronto Go Club"
     assert by_name["Mina Okada"].school == "University of Toronto"
+
+    assert by_name["Carlos Mendes"].club == "São Paulo Go Club"
+    assert by_name["Carlos Mendes"].school == "University of São Paulo"
+    assert by_name["Carlos Mendes"].team_id == "Team South"
+    assert by_name["Carlos Mendes"].notes == "Strong tesuji"
+
+    assert by_name["Noah Carter"].school == "University of California, Berkeley"
+    assert "Liam O'Connor" in by_name
