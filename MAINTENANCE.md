@@ -69,6 +69,9 @@ satisfied. The branch is ready for review and integration into `main`.
   simulations
 - Five rounds completed in both formats
 - Determinism normalized across repeated runs and replayed tournament files
+- Focused verification evidence:
+  - `python -m pytest tests/integration/test_tournament_trials.py -q` -> 3 passed
+  - `python -m pytest tests/integration -q` -> 7 passed
 - No-repeat, persistence, audit-history, and export checks passed in focused
   integration verification
 - Verification scope at this checkpoint: focused/integration verification only;

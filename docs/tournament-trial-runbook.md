@@ -119,9 +119,19 @@ director present.
 
 ## Post-event export and standings checks
 
-After the final round:
+After the final round, use the current export mechanism rather than a CLI
+export command:
 
-- export the players, pairings, results, and standings CSVs;
+1. Start the local server with `pairing web trial-open.tgo.json --port 8000`,
+   or reuse an existing local port if one is already serving the tournament.
+2. Open `/exports` in the browser to confirm the report hub is available.
+3. Download the CSVs directly from `/exports/players.csv`,
+   `/exports/pairings.csv`, `/exports/results.csv`, and
+   `/exports/standings.csv`.
+4. There is no CLI export command yet.
+
+Then complete the final checks:
+
 - confirm the expected headers are present in each export;
 - confirm the final standings include all 32 players exactly once;
 - confirm the final order is stable after a save/reload cycle;

@@ -2,7 +2,7 @@
 
 ## Current Baseline
 
-- Worktree: `C:\Users\user\Documents\Pairing software dev`
+- Worktree: `C:\Users\user\Documents\Pairing software dev\.worktrees\stage-5-tournament-trials`
 - Branch: `codex/stage-5-tournament-trials`
 - Integration target: `main` after verification
 - Scope: one local tournament director and one managing process
