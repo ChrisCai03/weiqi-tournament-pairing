@@ -209,4 +209,3 @@ Update `MAINTENANCE.md` with fresh test, lint, typing, compilation, and coverage
 git add MAINTENANCE.md
 git commit -m "Record Stage 5 tournament trial verification"
 ```
-
