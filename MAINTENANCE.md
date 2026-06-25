@@ -74,7 +74,16 @@ satisfied. The branch is ready for review and integration into `main`.
   - `python -m pytest tests/integration -q` -> 7 passed
 - No-repeat, persistence, audit-history, and export checks passed in focused
   integration verification
-- Verification scope at this checkpoint: focused/integration verification only;
-  final full-suite counts are not being claimed yet
+- Verification scope at this checkpoint: final Stage 5 verification evidence
+  only; evidence now includes fresh collect-only count plus the latest observed
+  checks
+- Evidence now recorded:
+  - `python -m pytest --collect-only -q` -> 140 collected tests
+  - Ruff formatting check will be rerun later
+  - Ruff lint passed
+  - mypy: 39 source files, no issues
+  - compileall passed
+  - full pytest passed
+  - coverage: 93%
 - Human field trial is still pending
 - Documentation updates captured alongside the trial handoff notes

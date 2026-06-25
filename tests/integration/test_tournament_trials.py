@@ -228,7 +228,9 @@ def _create_imported_tournament(
     return tournament_path, service
 
 
-def _play_complete_trial(service: TournamentService, *, rounds: int) -> tuple[tuple[dict[str, object], ...], ...]:
+def _play_complete_trial(
+    service: TournamentService, *, rounds: int
+) -> tuple[tuple[dict[str, object], ...], ...]:
     bye_counts: Counter[str] = Counter()
     opponent_pairs: set[frozenset[str]] = set()
     next_winner = "black"
