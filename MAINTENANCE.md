@@ -54,7 +54,7 @@ preferences, handicap, SODOS, expanded McMahon bands, PDF, and multi-user use.
 All twelve success criteria in the repository rehabilitation design are
 satisfied. The branch is ready for review and integration into `main`.
 
-## 2026-06-25 â€” Stage 5 print-friendly report slice
+## 2026-06-25 - Stage 5 print-friendly report slice
 
 - Added a `Reports` hub to the local web app
 - Added print-friendly pairings, results, and standings report pages
@@ -62,3 +62,16 @@ satisfied. The branch is ready for review and integration into `main`.
 - Verified the new report routes in Chrome against a sample tournament
 - Tests: focused web route tests and the full suite passed after the report
   addition
+
+## 2026-06-25 - Stage 5 tournament trial checkpoint
+
+- 32-player realistic fixture exercised in both Swiss and simplified McMahon
+  simulations
+- Five rounds completed in both formats
+- Determinism normalized across repeated runs and replayed tournament files
+- No-repeat, persistence, audit-history, and export checks passed in focused
+  integration verification
+- Verification scope at this checkpoint: focused/integration verification only;
+  final full-suite counts are not being claimed yet
+- Human field trial is still pending
+- Documentation updates captured alongside the trial handoff notes

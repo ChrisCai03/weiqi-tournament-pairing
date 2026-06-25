@@ -75,6 +75,8 @@ Supported:
 - auditable downstream regeneration
 - local CLI and server-rendered web UI
 - print-friendly report pages for pairings, results, and standings
+- realistic trial coverage with a 32-player fixture and deterministic
+  five-round Swiss/McMahon simulations
 
 Reserved for later work:
 
@@ -90,6 +92,7 @@ Reserved for later work:
 - [Architecture](docs/architecture.md)
 - [Roadmap](docs/roadmap.md)
 - [Maintenance log](MAINTENANCE.md)
+- [Tournament trial runbook](docs/tournament-trial-runbook.md)
 - [Tournament file format](docs/tournament-file-format.md)
 - [CSV format](docs/csv-format.md)
 - [Rehabilitation design](docs/superpowers/specs/2026-06-24-repository-rehabilitation-design.md)
