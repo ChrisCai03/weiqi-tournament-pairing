@@ -79,11 +79,11 @@ satisfied. The branch is ready for review and integration into `main`.
   checks
 - Evidence now recorded:
   - `python -m pytest --collect-only -q` -> 140 collected tests
-  - Ruff formatting check will be rerun later
+  - Ruff format: 58 files already formatted
   - Ruff lint passed
   - mypy: 39 source files, no issues
   - compileall passed
-  - full pytest passed
+  - full pytest: 140 passed
   - coverage: 93%
 - Human field trial is still pending
 - Documentation updates captured alongside the trial handoff notes

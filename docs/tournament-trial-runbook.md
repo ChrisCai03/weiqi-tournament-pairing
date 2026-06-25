@@ -8,7 +8,8 @@ print-layout trial is complete.
 
 ## Prerequisites
 
-- Branch: `codex/stage-5-tournament-trials`
+- A checkout containing the Stage 5 print reports and tournament-trial
+  fixtures described in `docs/roadmap.md`
 - Python 3.12 and the project development dependencies installed
 - A writable local path for the tournament file, such as `trial-open.tgo.json`
 - The realistic roster fixture at `tests/fixtures/players/realistic-open.csv`
@@ -124,7 +125,7 @@ export command:
 
 1. Start the local server with `pairing web trial-open.tgo.json --port 8000`,
    or reuse an existing local port if one is already serving the tournament.
-2. Open `/exports` in the browser to confirm the report hub is available.
+2. Open `/exports` in the browser to confirm the CSV export hub is available.
 3. Download the CSVs directly from `/exports/players.csv`,
    `/exports/pairings.csv`, `/exports/results.csv`, and
    `/exports/standings.csv`.
