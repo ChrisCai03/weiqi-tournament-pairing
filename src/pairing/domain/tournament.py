@@ -335,6 +335,7 @@ class Tournament:
     @classmethod
     def from_dict(cls, data: dict[str, object]) -> "Tournament":
         tournament_data = dict(data["tournament"])
+        config = TournamentConfig.from_dict(dict(data.get("config", {})))
         tournament = cls(
             id=str(tournament_data["id"]),
             name=str(tournament_data["name"]),
@@ -342,10 +343,13 @@ class Tournament:
             format=str(tournament_data.get("format", "swiss")),
             status=str(tournament_data.get("status", "draft")),
             schema_version=int(data.get("schema_version", SCHEMA_VERSION)),
-            config=TournamentConfig.from_dict(dict(data.get("config", {}))),
+            config=config,
             players=[Player.from_dict(dict(player)) for player in data.get("players", [])],
             teams=[dict(team) for team in data.get("teams", [])],
-            rounds=[Round.from_dict(dict(round_data)) for round_data in data.get("rounds", [])],
+            rounds=[
+                Round.from_dict(dict(round_data), config=config)
+                for round_data in data.get("rounds", [])
+            ],
             manual_overrides=[dict(item) for item in data.get("manual_overrides", [])],
             audit_log=[AuditLogEntry.from_dict(dict(entry)) for entry in data.get("audit_log", [])],
         )

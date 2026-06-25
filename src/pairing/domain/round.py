@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
+from pairing.domain.config import TournamentConfig
 from pairing.domain.game import Game
 from pairing.domain.validation import (
     PAIRING_METHODS,
@@ -76,8 +77,13 @@ class Round:
             game.validate()
 
     @classmethod
-    def from_dict(cls, data: dict[str, object]) -> "Round":
-        games = [Game.from_dict(dict(game)) for game in data.get("games", [])]
+    def from_dict(
+        cls,
+        data: dict[str, object],
+        *,
+        config: TournamentConfig | None = None,
+    ) -> "Round":
+        games = [Game.from_dict(dict(game), config=config) for game in data.get("games", [])]
         number = int(data["number"])
         _validate_games(number, games)
         round_obj = cls(

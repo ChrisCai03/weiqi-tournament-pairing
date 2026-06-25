@@ -156,7 +156,9 @@ def test_tournament_from_dict_loads_legacy_completed_results_without_scores() ->
     tournament = Tournament.create("Legacy Open")
     player_black = Player.create("Black", rank="1d", seed_number=1)
     player_white = Player.create("White", rank="1k", seed_number=2)
+    player_bye = Player.create("Bye Player", rank="2k", seed_number=3)
     tournament.players.extend([player_black, player_white])
+    tournament.players.append(player_bye)
 
     payload = tournament.to_dict()
     payload["rounds"] = [
@@ -186,6 +188,25 @@ def test_tournament_from_dict_loads_legacy_completed_results_without_scores() ->
                     },
                     "pairing_explanation": [],
                     "override_origin": "engine",
+                },
+                {
+                    "id": "legacy-game-2",
+                    "round_number": 1,
+                    "board_number": 2,
+                    "black_player_id": player_bye.id,
+                    "white_player_id": None,
+                    "handicap": 0,
+                    "komi": 0.0,
+                    "result": {
+                        "status": "completed",
+                        "result_type": "bye",
+                        "winner_player_id": player_bye.id,
+                        "entered_by": "cli",
+                        "notes": "",
+                        "correction_of": None,
+                    },
+                    "pairing_explanation": [],
+                    "override_origin": "engine",
                 }
             ],
             "is_regenerated": False,
@@ -198,4 +219,20 @@ def test_tournament_from_dict_loads_legacy_completed_results_without_scores() ->
 
     assert restored.rounds[0].games[0].result.result_type == "normal"
     assert restored.rounds[0].games[0].result.winner_player_id == player_black.id
-    assert restored.rounds[0].games[0].result.black_score is None
+    assert restored.rounds[0].games[0].result.black_score == 1.0
+    assert restored.rounds[0].games[0].result.white_score == 0.0
+    assert restored.rounds[0].games[0].result.outcome_code == "black_win"
+
+    assert restored.rounds[0].games[1].result.result_type == "bye"
+    assert restored.rounds[0].games[1].result.winner_player_id == player_bye.id
+    assert restored.rounds[0].games[1].result.black_score == 1.0
+    assert restored.rounds[0].games[1].result.white_score == 0.0
+    assert restored.rounds[0].games[1].result.outcome_code == "bye"
+
+    round_payload = restored.to_dict()["rounds"][0]
+    assert round_payload["games"][0]["result"]["black_score"] == 1.0
+    assert round_payload["games"][0]["result"]["white_score"] == 0.0
+    assert round_payload["games"][0]["result"]["outcome_code"] == "black_win"
+    assert round_payload["games"][1]["result"]["black_score"] == 1.0
+    assert round_payload["games"][1]["result"]["white_score"] == 0.0
+    assert round_payload["games"][1]["result"]["outcome_code"] == "bye"
