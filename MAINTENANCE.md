@@ -87,3 +87,10 @@ satisfied. The branch is ready for review and integration into `main`.
   - coverage: 93%
 - Human field trial is still pending
 - Documentation updates captured alongside the trial handoff notes
+
+## 2026-06-25 - Stage 5 integrated into main
+
+- Fast-forwarded `codex/stage-5-tournament-trials` into local `main`
+- Normalized Ruff formatting for the print-report files in the main checkout
+  after the merge exposed a Windows line-ending difference
+- Updated `PROJECT_CONTEXT.md` to identify `main` as the active baseline

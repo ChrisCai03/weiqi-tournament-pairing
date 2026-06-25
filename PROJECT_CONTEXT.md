@@ -2,16 +2,14 @@
 
 ## Current Baseline
 
-- Worktree: `C:\Users\user\Documents\Pairing software dev\.worktrees\stage-5-tournament-trials`
-- Branch: `codex/stage-5-tournament-trials`
-- Integration target: `main` after verification
+- Worktree: `C:\Users\user\Documents\Pairing software dev`
+- Branch: `main`
 - Scope: one local tournament director and one managing process
 - Canonical state: schema-version-1 `.tgo.json`
 
-This active feature work branch contains rehabilitated Stages 1-4, the first
-Stage 5 report slice, and the completed realistic tournament simulations. It
-should be treated as the active implementation baseline until verification is
-complete and the work is integrated into `main`.
+`main` contains rehabilitated Stages 1-4, the first Stage 5 report slice, and
+the completed realistic tournament simulations. It is the active
+implementation baseline.
 
 ## Architecture
 
@@ -59,7 +57,7 @@ python -m pytest --cov=pairing --cov-report=term-missing -q
 
 ## Integration Recommendation
 
-Continue with the Stage 5 report and tournament-trial milestones on the active
-feature work branch. Keep report surfaces small, printable, and easy to verify
-before adding PDF or more advanced output. Merge into `main` after the
-verification checkpoint is complete.
+Run the human print-layout and tournament-director trial described in
+`docs/tournament-trial-runbook.md`. Address any field-trial corrections first;
+otherwise design Milestone B Tournament Director Essentials before
+implementation.
