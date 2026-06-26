@@ -35,9 +35,7 @@ def result_contribution(
     if outcome_code == "draw":
         return ScoreContribution(score=score or 0.0, draws=1)
     if outcome_code == "bye":
-        if score is not None and score != 0.0:
-            return ScoreContribution(score=score or 0.0, wins=1, byes=1)
-        return ScoreContribution(score=score or 0.0)
+        return ScoreContribution(score=score or 0.0, wins=1, byes=1)
     if outcome_code == "both_win":
         return ScoreContribution(score=score or 0.0, wins=1)
     if outcome_code == "both_loss":

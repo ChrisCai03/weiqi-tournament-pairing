@@ -1,5 +1,6 @@
 import pytest
 
+from pairing.domain.config import TournamentConfig
 from pairing.domain.game import Game
 from pairing.domain.player import Player
 from pairing.domain.result import Result
@@ -270,6 +271,55 @@ def test_generate_later_round_assigns_one_bye_to_the_lowest_scoring_eligible_pla
     bye_games = [game for game in round_two.games if game.result.result_type == "bye"]
     assert len(bye_games) == 1
     assert bye_games[0].result.winner_player_id == devin.id
+
+
+def test_generate_later_round_does_not_repeat_a_zero_point_bye_when_another_player_is_eligible() -> None:
+    tournament = Tournament.create("Zero Point Bye", round_count=3)
+    alice = Player.create("Alice", rank="5d", seed_number=1)
+    bob = Player.create("Bob", rank="4d", seed_number=2)
+    cara = Player.create("Cara", rank="3d", seed_number=3)
+    devin = Player.create("Devin", rank="2d", seed_number=4)
+    eve = Player.create("Eve", rank="1d", seed_number=5)
+    tournament.players.extend([alice, bob, cara, devin, eve])
+
+    tournament.rounds.append(
+        _completed_round(
+            number=1,
+            games=[
+                _completed_outcome_game(
+                    round_number=1,
+                    board_number=1,
+                    black_player_id=alice.id,
+                    white_player_id=bob.id,
+                    outcome_code="black_win",
+                    config=tournament.config,
+                ),
+                _completed_outcome_game(
+                    round_number=1,
+                    board_number=2,
+                    black_player_id=cara.id,
+                    white_player_id=devin.id,
+                    outcome_code="black_win",
+                    config=tournament.config,
+                ),
+                _completed_outcome_game(
+                    round_number=1,
+                    board_number=3,
+                    black_player_id=eve.id,
+                    white_player_id=None,
+                    outcome_code="bye",
+                    config=TournamentConfig(score_bye=0.0),
+                ),
+            ],
+        )
+    )
+
+    round_two = generate_next_round(tournament)
+
+    bye_games = [game for game in round_two.games if game.result.result_type == "bye"]
+    assert len(bye_games) == 1
+    assert bye_games[0].result.winner_player_id != eve.id
+    assert bye_games[0].result.winner_player_id in {bob.id, cara.id, devin.id}
 
 
 def test_generate_later_round_falls_back_to_repeat_bye_when_the_first_choice_dead_ends() -> None:
