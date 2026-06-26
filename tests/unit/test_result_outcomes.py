@@ -235,6 +235,21 @@ def test_result_contribution_tracks_score_and_counter_semantics(
     assert contribution.no_shows == expected["no_shows"]
 
 
+def test_result_contribution_counts_white_side_rich_bye_as_win_and_bye() -> None:
+    result = Result.completed_outcome(
+        outcome_code="bye",
+        black_player_id=None,
+        white_player_id="white-1",
+        config=TournamentConfig(allow_draws=True),
+    )
+
+    contribution = result_contribution(result, side="white")
+
+    assert contribution.score == 1.0
+    assert contribution.wins == 1
+    assert contribution.byes == 1
+
+
 def test_counts_as_played_honours_both_result_and_void_policies() -> None:
     result_both_win = Result.completed_outcome(
         outcome_code="both_win",

@@ -340,6 +340,37 @@ def test_calculate_standings_tracks_scores_byes_and_tiebreaks() -> None:
     assert diana_entry.sosos == 2.0
 
 
+def test_calculate_standings_counts_white_side_bye_as_win_and_bye() -> None:
+    tournament = Tournament.create("Example Weiqi Open")
+    alice = Player.create("Alice", rank="3d", seed_number=1)
+    tournament.players.append(alice)
+
+    bye_game = Game.create(
+        round_number=1,
+        board_number=1,
+        black_player_id=None,
+        white_player_id=alice.id,
+        pairing_explanation=[],
+    )
+    bye_game.result = Result.completed_outcome(
+        outcome_code="bye",
+        black_player_id=None,
+        white_player_id=alice.id,
+        config=tournament.config,
+    )
+    tournament.rounds.append(
+        Round.create(number=1, games=[bye_game], pairing_method="swiss", pairing_seed=1)
+    )
+
+    standings = calculate_standings(tournament)
+
+    alice_entry = next(entry for entry in standings if entry.player.id == alice.id)
+
+    assert alice_entry.score == 1.0
+    assert alice_entry.wins == 1
+    assert alice_entry.byes == 1
+
+
 def test_calculate_standings_uses_rank_seed_and_player_id_as_final_sort_keys() -> None:
     tournament = Tournament.create("Example Weiqi Open")
 

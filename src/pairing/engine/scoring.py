@@ -27,6 +27,7 @@ def result_contribution(
     side: PlayerSide,
     config: TournamentConfig | None = None,
 ) -> ScoreContribution:
+    config = config or TournamentConfig()
     score = result.black_score if side == "black" else result.white_score
     outcome_code = result.outcome_code
     if result.status != "completed" or outcome_code is None:
@@ -34,7 +35,7 @@ def result_contribution(
     if outcome_code == "draw":
         return ScoreContribution(score=score or 0.0, draws=1)
     if outcome_code == "bye":
-        if side == "black":
+        if score == config.score_bye:
             return ScoreContribution(score=score or 0.0, wins=1, byes=1)
         return ScoreContribution(score=score or 0.0)
     if outcome_code == "both_win":
