@@ -36,7 +36,7 @@ def result_contribution(result: Result, *, side: PlayerSide) -> ScoreContributio
     if outcome_code == "both_loss":
         return ScoreContribution(score=score or 0.0, losses=1)
     if outcome_code == "both_no_show":
-        return ScoreContribution(score=score or 0.0, no_shows=1)
+        return ScoreContribution(score=score or 0.0, losses=1, no_shows=1)
     if outcome_code == "black_win":
         return _win_loss_contribution(score=score or 0.0, winner_side="black", side=side)
     if outcome_code == "white_win":

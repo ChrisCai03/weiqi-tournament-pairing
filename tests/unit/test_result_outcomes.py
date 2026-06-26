@@ -96,14 +96,111 @@ def test_completed_outcome_rejects_invalid_bye_shape(
 
 
 @pytest.mark.parametrize(
+    ("payload", "message"),
+    [
+        (
+            {
+                "status": "completed",
+                "result_type": "draw",
+                "winner_player_id": None,
+                "black_score": 0.5,
+                "white_score": 0.5,
+                "outcome_code": "black_win",
+            },
+            "Outcome code 'black_win' requires result type 'normal'",
+        ),
+        (
+            {
+                "status": "completed",
+                "result_type": "normal",
+                "winner_player_id": "black-1",
+                "black_score": 1.0,
+                "white_score": 0.0,
+            },
+            "Completed results with scores must define outcome_code",
+        ),
+        (
+            {
+                "status": "completed",
+                "result_type": "normal",
+                "winner_player_id": "black-1",
+                "outcome_code": "black_win",
+            },
+            "Completed results with outcome_code must define both scores",
+        ),
+    ],
+)
+def test_result_from_dict_rejects_malformed_completed_payloads(
+    payload: dict[str, object], message: str
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        Result.from_dict(payload)
+
+
+def test_result_from_dict_rejects_pending_completion_metadata() -> None:
+    with pytest.raises(ValueError, match="Pending results must not include completion metadata"):
+        Result.from_dict(
+            {
+                "status": "pending",
+                "result_type": "pending",
+                "winner_player_id": "black-1",
+                "entered_at": "2026-06-25T00:00:00+00:00",
+            }
+        )
+
+
+def test_with_game_context_rejects_outcome_winner_on_wrong_player() -> None:
+    result = Result.from_dict(
+        {
+            "status": "completed",
+            "result_type": "normal",
+            "winner_player_id": "white-1",
+            "black_score": 1.0,
+            "white_score": 0.0,
+            "outcome_code": "black_win",
+        }
+    )
+
+    with pytest.raises(ValueError, match="must name the black player as winner"):
+        result.with_game_context(
+            black_player_id="black-1",
+            white_player_id="white-1",
+            config=TournamentConfig(),
+        )
+
+
+def test_with_game_context_preserves_historical_scores_for_rich_results() -> None:
+    result = Result.from_dict(
+        {
+            "status": "completed",
+            "result_type": "normal",
+            "winner_player_id": "black-1",
+            "black_score": 2.0,
+            "white_score": -1.0,
+            "outcome_code": "black_win",
+        }
+    )
+
+    normalized = result.with_game_context(
+        black_player_id="black-1",
+        white_player_id="white-1",
+        config=TournamentConfig(),
+    )
+
+    assert normalized.black_score == 2.0
+    assert normalized.white_score == -1.0
+    assert normalized.outcome_code == "black_win"
+
+
+@pytest.mark.parametrize(
     ("outcome_code", "side", "expected"),
     [
         ("black_forfeit", "black", {"wins": 1, "losses": 0, "forfeits": 0, "no_shows": 0}),
         ("black_forfeit", "white", {"wins": 0, "losses": 1, "forfeits": 1, "no_shows": 0}),
         ("white_no_show", "black", {"wins": 1, "losses": 0, "forfeits": 0, "no_shows": 0}),
         ("white_no_show", "white", {"wins": 0, "losses": 1, "forfeits": 0, "no_shows": 1}),
-        ("both_no_show", "black", {"wins": 0, "losses": 0, "forfeits": 0, "no_shows": 1}),
-        ("both_no_show", "white", {"wins": 0, "losses": 0, "forfeits": 0, "no_shows": 1}),
+        ("both_no_show", "black", {"wins": 0, "losses": 1, "forfeits": 0, "no_shows": 1}),
+        ("both_no_show", "white", {"wins": 0, "losses": 1, "forfeits": 0, "no_shows": 1}),
         ("both_win", "black", {"wins": 1, "losses": 0, "forfeits": 0, "no_shows": 0}),
         ("both_loss", "white", {"wins": 0, "losses": 1, "forfeits": 0, "no_shows": 0}),
         ("draw", "black", {"wins": 0, "losses": 0, "forfeits": 0, "no_shows": 0}),

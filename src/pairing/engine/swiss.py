@@ -63,7 +63,12 @@ def _generate_first_round(
             white_player_id=None,
             pairing_explanation=bye_explanation(round_number=round_number, player=bye_player),
         )
-        bye_game.result = Result.completed(result_type="bye", winner_player_id=bye_player.id)
+        bye_game.result = Result.completed_outcome(
+            outcome_code="bye",
+            black_player_id=bye_player.id,
+            white_player_id=None,
+            config=tournament.config,
+        )
         games.append(bye_game)
 
     half_size = len(paired_players) // 2
@@ -127,8 +132,11 @@ def _generate_later_round(
                     round_number=round_number, player=bye_entry.player
                 ),
             )
-            bye_game.result = Result.completed(
-                result_type="bye", winner_player_id=bye_entry.player.id
+            bye_game.result = Result.completed_outcome(
+                outcome_code="bye",
+                black_player_id=bye_entry.player.id,
+                white_player_id=None,
+                config=tournament.config,
             )
             games.append(bye_game)
             break
@@ -142,7 +150,13 @@ def _generate_later_round(
                 remaining_entries,
                 opponent_history,
             )
-            games.append(_bye_game(round_number=round_number, player=bye_entry.player))
+            games.append(
+                _bye_game(
+                    round_number=round_number,
+                    player=bye_entry.player,
+                    config=tournament.config,
+                )
+            )
     else:
         pairings, warnings = pair_score_groups_with_fallback(
             active_entries,
@@ -180,7 +194,7 @@ def _generate_later_round(
     return games, warnings
 
 
-def _bye_game(*, round_number: int, player: Player) -> Game:
+def _bye_game(*, round_number: int, player: Player, config) -> Game:
     bye_game = Game.create(
         round_number=round_number,
         board_number=1,
@@ -188,7 +202,12 @@ def _bye_game(*, round_number: int, player: Player) -> Game:
         white_player_id=None,
         pairing_explanation=bye_explanation(round_number=round_number, player=player),
     )
-    bye_game.result = Result.completed(result_type="bye", winner_player_id=player.id)
+    bye_game.result = Result.completed_outcome(
+        outcome_code="bye",
+        black_player_id=player.id,
+        white_player_id=None,
+        config=config,
+    )
     return bye_game
 
 

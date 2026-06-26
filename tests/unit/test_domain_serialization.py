@@ -5,6 +5,7 @@ from pairing.domain.config import TournamentConfig
 from pairing.domain.game import Game
 from pairing.domain.player import Player
 from pairing.domain.result import Result
+from pairing.domain.round import Round
 from pairing.domain.tournament import Tournament
 
 
@@ -150,6 +151,43 @@ def test_game_from_dict_normalizes_legacy_result_when_config_is_supplied() -> No
     assert game.result.outcome_code == "black_win"
     assert game.result.black_score == 1.0
     assert game.result.white_score == 0.0
+
+
+def test_tournament_record_and_correct_result_persist_rich_result_shape() -> None:
+    tournament = Tournament.create("Immediate Results Open")
+    player_black = Player.create("Black", rank="1d", seed_number=1)
+    player_white = Player.create("White", rank="1k", seed_number=2)
+    tournament.players.extend([player_black, player_white])
+    tournament.rounds.append(
+        Round.create(
+            number=1,
+            games=[
+                Game.create(
+                    round_number=1,
+                    board_number=1,
+                    black_player_id=player_black.id,
+                    white_player_id=player_white.id,
+                    pairing_explanation=[],
+                )
+            ],
+            pairing_method="swiss",
+            pairing_seed=1,
+        )
+    )
+    tournament.record_result(round_number=1, board_number=1, winner="black")
+
+    recorded = tournament.rounds[0].games[0].result
+    assert recorded.outcome_code == "black_win"
+    assert recorded.black_score == 1.0
+    assert recorded.white_score == 0.0
+
+    tournament.correct_result(round_number=1, board_number=1, winner="white")
+
+    corrected = tournament.rounds[0].games[0].result
+    assert corrected.outcome_code == "white_win"
+    assert corrected.black_score == 0.0
+    assert corrected.white_score == 1.0
+    assert corrected.correction_of is not None
 
 
 def test_tournament_from_dict_loads_legacy_completed_results_without_scores() -> None:

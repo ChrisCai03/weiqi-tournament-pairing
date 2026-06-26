@@ -46,6 +46,28 @@ def test_generate_next_round_uses_mcmahon_generator() -> None:
     )
 
 
+def test_generate_mcmahon_round_assigns_rich_bye_result_for_odd_player_field() -> None:
+    tournament = Tournament.create("McMahon Bye Open", format="mcmahon")
+    tournament.players.extend(
+        [
+            Player.create("Alice", rank="4d", seed_number=1),
+            Player.create("Bob", rank="3d", seed_number=2),
+            Player.create("Charlie", rank="1d", seed_number=3),
+            Player.create("Diana", rank="1k", seed_number=4),
+            Player.create("Eve", rank="5k", seed_number=5),
+        ]
+    )
+
+    round_obj = generate_next_round(tournament)
+
+    bye_game = next(game for game in round_obj.games if game.result.result_type == "bye")
+
+    assert bye_game.result.status == "completed"
+    assert bye_game.result.outcome_code == "bye"
+    assert bye_game.result.black_score == 1.0
+    assert bye_game.result.white_score == 0.0
+
+
 def test_generate_mcmahon_round_has_stable_bar_pairing_order() -> None:
     tournament = Tournament.create("McMahon Characterization", format="mcmahon")
     tournament.players.extend(

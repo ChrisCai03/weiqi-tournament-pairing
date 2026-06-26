@@ -110,9 +110,11 @@ class Tournament:
                 f"Round {round_number} board {board_number} already has a completed "
                 "result; use result correction."
             )
-        game.result = Result.completed(
-            result_type="normal",
-            winner_player_id=winner_player_id,
+        game.result = Result.completed_outcome(
+            outcome_code="black_win" if winner == "black" else "white_win",
+            black_player_id=game.black_player_id,
+            white_player_id=game.white_player_id,
+            config=self.config,
             entered_by=actor,
         )
         invalidated_rounds = self._finish_result_change(
@@ -166,9 +168,11 @@ class Tournament:
                 "previous_result": previous_result,
             },
         )
-        game.result = Result.completed(
-            result_type="normal",
-            winner_player_id=winner_player_id,
+        game.result = Result.completed_outcome(
+            outcome_code="black_win" if winner == "black" else "white_win",
+            black_player_id=game.black_player_id,
+            white_player_id=game.white_player_id,
+            config=self.config,
             entered_by=actor,
             correction_of=correction_event.id,
         )

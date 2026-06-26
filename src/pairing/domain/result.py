@@ -17,6 +17,37 @@ def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+_RESULT_TYPE_BY_OUTCOME_CODE = {
+    "black_win": "normal",
+    "white_win": "normal",
+    "draw": "draw",
+    "both_win": "both_win",
+    "both_loss": "both_loss",
+    "black_forfeit": "forfeit",
+    "white_forfeit": "forfeit",
+    "black_no_show": "no_show",
+    "white_no_show": "no_show",
+    "both_no_show": "no_show",
+    "bye": "bye",
+    "void": "void",
+}
+
+_WINNER_REQUIREMENT_BY_OUTCOME_CODE = {
+    "black_win": "black",
+    "white_win": "white",
+    "draw": "none",
+    "both_win": "none",
+    "both_loss": "none",
+    "black_forfeit": "black",
+    "white_forfeit": "white",
+    "black_no_show": "white",
+    "white_no_show": "black",
+    "both_no_show": "none",
+    "bye": "bye",
+    "void": "none",
+}
+
+
 @dataclass(slots=True)
 class Result:
     status: str
@@ -102,7 +133,15 @@ class Result:
         white_player_id: str | None,
         config: TournamentConfig,
     ) -> "Result":
-        if self.status != "completed" or self.result_type == "pending" or self.outcome_code is not None:
+        self.validate()
+        if self.status != "completed" or self.result_type == "pending":
+            return self
+        if self.outcome_code is not None:
+            _validate_outcome_context(
+                result=self,
+                black_player_id=black_player_id,
+                white_player_id=white_player_id,
+            )
             return self
         outcome_code = _infer_outcome_code(
             result=self,
@@ -138,6 +177,19 @@ class Result:
             raise ValueError("Pending result status requires pending result type.")
         if self.status == "completed" and self.result_type == "pending":
             raise ValueError("Completed result status cannot use pending result type.")
+        if self.status == "pending":
+            if any(
+                field is not None
+                for field in (
+                    self.winner_player_id,
+                    self.black_score,
+                    self.white_score,
+                    self.outcome_code,
+                    self.entered_at,
+                )
+            ):
+                raise ValueError("Pending results must not include completion metadata.")
+            return
         if self.outcome_code is not None:
             require_choice(self.outcome_code, RESULT_OUTCOME_CODES, "result outcome")
         if self.black_score is not None:
@@ -146,6 +198,13 @@ class Result:
             require_finite_number(self.white_score, "White score")
         if (self.black_score is None) != (self.white_score is None):
             raise ValueError("Completed results must define both scores or neither score.")
+        if self.outcome_code is None:
+            if self.black_score is not None:
+                raise ValueError("Completed results with scores must define outcome_code.")
+            return
+        if self.black_score is None:
+            raise ValueError("Completed results with outcome_code must define both scores.")
+        _validate_completed_outcome_shape(self)
 
     @classmethod
     def from_dict(cls, data: dict[str, object]) -> "Result":
@@ -202,6 +261,61 @@ def _infer_outcome_code(
     if result.result_type == "void":
         return "void"
     raise ValueError(f"Cannot infer outcome code for result type {result.result_type!r}.")
+
+
+def _validate_completed_outcome_shape(result: Result) -> None:
+    if result.outcome_code is None:
+        return
+
+    expected_result_type = _RESULT_TYPE_BY_OUTCOME_CODE[result.outcome_code]
+    if result.result_type != expected_result_type:
+        raise ValueError(
+            f"Outcome code {result.outcome_code!r} requires result type "
+            f"{expected_result_type!r}."
+        )
+
+    winner_requirement = _WINNER_REQUIREMENT_BY_OUTCOME_CODE[result.outcome_code]
+    if winner_requirement == "none":
+        if result.winner_player_id is not None:
+            raise ValueError(
+                f"Outcome code {result.outcome_code!r} cannot define winner_player_id."
+            )
+        return
+    if result.winner_player_id is None:
+        raise ValueError(f"Outcome code {result.outcome_code!r} requires winner_player_id.")
+
+
+def _validate_outcome_context(
+    *,
+    result: Result,
+    black_player_id: str | None,
+    white_player_id: str | None,
+) -> None:
+    if result.outcome_code is None:
+        return
+
+    winner_requirement = _WINNER_REQUIREMENT_BY_OUTCOME_CODE[result.outcome_code]
+    if winner_requirement == "none":
+        return
+    if winner_requirement == "bye":
+        player_ids = [
+            player_id for player_id in (black_player_id, white_player_id) if player_id is not None
+        ]
+        if len(player_ids) != 1:
+            raise ValueError("Bye outcomes require exactly one real player.")
+        if result.winner_player_id != player_ids[0]:
+            raise ValueError("Outcome code 'bye' must name the bye player as winner.")
+        return
+    if black_player_id is None or white_player_id is None:
+        raise ValueError(f"Outcome code {result.outcome_code!r} requires both game players.")
+
+    expected_winner_id = black_player_id if winner_requirement == "black" else white_player_id
+    expected_winner_label = winner_requirement
+    if result.winner_player_id != expected_winner_id:
+        raise ValueError(
+            f"Outcome code {result.outcome_code!r} must name the {expected_winner_label} "
+            "player as winner."
+        )
 
 
 def _outcome_details(

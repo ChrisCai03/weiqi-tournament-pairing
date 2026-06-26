@@ -107,6 +107,9 @@ def test_generate_first_round_assigns_bye_to_lowest_ranked_active_player() -> No
     bye_game = next(game for game in round_obj.games if game.result.result_type == "bye")
     assert bye_game.result.status == "completed"
     assert bye_game.result.winner_player_id == tournament.players[4].id
+    assert bye_game.result.outcome_code == "bye"
+    assert bye_game.result.black_score == 1.0
+    assert bye_game.result.white_score == 0.0
     assert {bye_game.black_player_id, bye_game.white_player_id} == {tournament.players[4].id, None}
 
 
