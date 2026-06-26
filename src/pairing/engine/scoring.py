@@ -97,6 +97,8 @@ def player_game_contribution(
 def counts_as_played(result: Result, config: TournamentConfig) -> bool:
     if result.status != "completed":
         return False
+    if result.outcome_code is None and result.result_type == "void":
+        return False
     if result.outcome_code == "both_win":
         return config.count_both_win_as_played
     if result.outcome_code == "both_loss":

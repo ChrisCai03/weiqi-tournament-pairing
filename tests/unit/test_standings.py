@@ -125,6 +125,39 @@ def test_history_helpers_count_both_results_once_and_skip_void_games() -> None:
     }
 
 
+def test_history_helpers_skip_legacy_void_results() -> None:
+    tournament = Tournament.create("Example Weiqi Open")
+    alice = Player.create("Alice", rank="4d", seed_number=1)
+    bob = Player.create("Bob", rank="3d", seed_number=2)
+    tournament.players.extend([alice, bob])
+
+    legacy_void_game = Game.create(
+        round_number=1,
+        board_number=1,
+        black_player_id=alice.id,
+        white_player_id=bob.id,
+        pairing_explanation=[],
+    )
+    legacy_void_game.result = Result.completed(result_type="void", winner_player_id=None)
+    tournament.rounds.append(
+        Round.create(
+            number=1,
+            games=[legacy_void_game],
+            pairing_method="swiss",
+            pairing_seed=1,
+        )
+    )
+
+    assert opponent_ids_by_player(tournament) == {
+        alice.id: [],
+        bob.id: [],
+    }
+    assert colour_history_by_player(tournament) == {
+        alice.id: [],
+        bob.id: [],
+    }
+
+
 def test_calculate_standings_excludes_pending_pairings_from_history_and_sos() -> None:
     tournament = Tournament.create("Example Weiqi Open")
     alice = Player.create("Alice", rank="3d", seed_number=1)
