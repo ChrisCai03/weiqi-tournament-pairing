@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pairing.domain.tournament import Tournament
+from pairing.engine.scoring import counts_as_played
 
 
 def opponent_ids_by_player(tournament: Tournament) -> dict[str, list[str]]:
@@ -10,6 +11,8 @@ def opponent_ids_by_player(tournament: Tournament) -> dict[str, list[str]]:
             continue
         for game in round_obj.games:
             if game.black_player_id is None or game.white_player_id is None:
+                continue
+            if not counts_as_played(game.result, tournament.config):
                 continue
             history.setdefault(game.black_player_id, []).append(game.white_player_id)
             history.setdefault(game.white_player_id, []).append(game.black_player_id)
@@ -31,6 +34,8 @@ def colour_history_by_player(tournament: Tournament) -> dict[str, list[str]]:
             continue
         for game in round_obj.games:
             if game.black_player_id is None or game.white_player_id is None:
+                continue
+            if not counts_as_played(game.result, tournament.config):
                 continue
             history.setdefault(game.black_player_id, []).append("black")
             history.setdefault(game.white_player_id, []).append("white")

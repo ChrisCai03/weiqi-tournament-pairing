@@ -1,8 +1,16 @@
+import csv
+from io import StringIO
+
 import pytest
 
 from pairing.domain.config import TournamentConfig
+from pairing.domain.game import Game
+from pairing.domain.player import Player
 from pairing.domain.result import Result
+from pairing.domain.round import Round
+from pairing.domain.tournament import Tournament
 from pairing.engine.scoring import counts_as_played, result_contribution
+from pairing.import_export.csv_export import results_to_csv
 
 
 @pytest.mark.parametrize(
@@ -260,3 +268,46 @@ def test_counts_as_played_honours_both_result_and_void_policies() -> None:
     assert counts_as_played(result_both_win, TournamentConfig()) is True
     assert counts_as_played(result_both_loss, TournamentConfig()) is True
     assert counts_as_played(result_void, permissive_config) is True
+
+
+def test_results_csv_includes_outcome_code_and_persisted_scores() -> None:
+    tournament = Tournament.create("Example Weiqi Open")
+    alice = Player.create("Alice", rank="3d", seed_number=1)
+    bob = Player.create("Bob", rank="2d", seed_number=2)
+    tournament.players.extend([alice, bob])
+
+    game = Game.create(
+        round_number=1,
+        board_number=1,
+        black_player_id=alice.id,
+        white_player_id=bob.id,
+        pairing_explanation=[],
+    )
+    game.result = Result.from_dict(
+        {
+            "status": "completed",
+            "result_type": "both_win",
+            "winner_player_id": None,
+            "black_score": 2.0,
+            "white_score": 2.0,
+            "outcome_code": "both_win",
+        }
+    )
+    tournament.rounds.append(
+        Round.create(number=1, games=[game], pairing_method="swiss", pairing_seed=1)
+    )
+
+    rows = list(csv.DictReader(StringIO(results_to_csv(tournament))))
+
+    assert rows == [
+        {
+            "Round": "1",
+            "Board": "1",
+            "Winner": "",
+            "Result Type": "both_win",
+            "outcome_code": "both_win",
+            "black_score": "2.0",
+            "white_score": "2.0",
+            "Entered At": "",
+        }
+    ]

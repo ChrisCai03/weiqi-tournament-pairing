@@ -49,7 +49,83 @@ def test_history_helpers_track_pairing_commitments() -> None:
     }
 
 
-def test_calculate_standings_includes_pending_pairings_in_history_but_not_score() -> None:
+def test_history_helpers_count_both_results_once_and_skip_void_games() -> None:
+    tournament = Tournament.create("Example Weiqi Open")
+    alice = Player.create("Alice", rank="4d", seed_number=1)
+    bob = Player.create("Bob", rank="3d", seed_number=2)
+    charlie = Player.create("Charlie", rank="2d", seed_number=3)
+    diana = Player.create("Diana", rank="1d", seed_number=4)
+    eve = Player.create("Eve", rank="1k", seed_number=5)
+    frank = Player.create("Frank", rank="2k", seed_number=6)
+    tournament.players.extend([alice, bob, charlie, diana, eve, frank])
+
+    both_win_game = Game.create(
+        round_number=1,
+        board_number=1,
+        black_player_id=alice.id,
+        white_player_id=bob.id,
+        pairing_explanation=[],
+    )
+    both_win_game.result = Result.completed_outcome(
+        outcome_code="both_win",
+        black_player_id=alice.id,
+        white_player_id=bob.id,
+        config=tournament.config,
+    )
+    both_loss_game = Game.create(
+        round_number=1,
+        board_number=2,
+        black_player_id=charlie.id,
+        white_player_id=diana.id,
+        pairing_explanation=[],
+    )
+    both_loss_game.result = Result.completed_outcome(
+        outcome_code="both_loss",
+        black_player_id=charlie.id,
+        white_player_id=diana.id,
+        config=tournament.config,
+    )
+    void_game = Game.create(
+        round_number=1,
+        board_number=3,
+        black_player_id=eve.id,
+        white_player_id=frank.id,
+        pairing_explanation=[],
+    )
+    void_game.result = Result.completed_outcome(
+        outcome_code="void",
+        black_player_id=eve.id,
+        white_player_id=frank.id,
+        config=tournament.config,
+    )
+    tournament.rounds.append(
+        Round.create(
+            number=1,
+            games=[both_win_game, both_loss_game, void_game],
+            pairing_method="swiss",
+            pairing_seed=1,
+        )
+    )
+
+    assert opponent_ids_by_player(tournament) == {
+        alice.id: [bob.id],
+        bob.id: [alice.id],
+        charlie.id: [diana.id],
+        diana.id: [charlie.id],
+        eve.id: [],
+        frank.id: [],
+    }
+    assert colour_history_by_player(tournament) == {
+        alice.id: ["black"],
+        bob.id: ["white"],
+        charlie.id: ["black"],
+        diana.id: ["white"],
+        eve.id: [],
+        frank.id: [],
+    }
+
+
+def test_calculate_standings_excludes_pending_pairings_from_history_and_sos() -> None:
     tournament = Tournament.create("Example Weiqi Open")
     alice = Player.create("Alice", rank="3d", seed_number=1)
     bob = Player.create("Bob", rank="2d", seed_number=2)
@@ -95,17 +171,17 @@ def test_calculate_standings_includes_pending_pairings_in_history_but_not_score(
     bob_entry = next(entry for entry in standings if entry.player.id == bob.id)
     charlie_entry = next(entry for entry in standings if entry.player.id == charlie.id)
 
-    assert alice_entry.opponents == [bob.id, charlie.id]
-    assert alice_entry.colours == ["black", "black"]
+    assert alice_entry.opponents == [bob.id]
+    assert alice_entry.colours == ["black"]
     assert alice_entry.sos == 0.0
 
     assert bob_entry.opponents == [alice.id]
     assert bob_entry.colours == ["white"]
     assert bob_entry.sos == 1.0
 
-    assert charlie_entry.opponents == [alice.id]
-    assert charlie_entry.colours == ["white"]
-    assert charlie_entry.sos == 1.0
+    assert charlie_entry.opponents == []
+    assert charlie_entry.colours == []
+    assert charlie_entry.sos == 0.0
 
 
 def test_calculate_standings_tracks_scores_byes_and_tiebreaks() -> None:
@@ -360,6 +436,46 @@ def test_calculate_standings_supports_starting_scores() -> None:
     assert bob_entry.starting_score == 0.0
     assert bob_entry.game_score == 0.0
     assert bob_entry.score == 0.0
+
+
+def test_calculate_standings_uses_persisted_scores_and_tracks_draws() -> None:
+    tournament = Tournament.create("Example Weiqi Open")
+    alice = Player.create("Alice", rank="4d", seed_number=1)
+    bob = Player.create("Bob", rank="3d", seed_number=2)
+    tournament.players.extend([alice, bob])
+
+    game = Game.create(
+        round_number=1,
+        board_number=1,
+        black_player_id=alice.id,
+        white_player_id=bob.id,
+        pairing_explanation=[],
+    )
+    game.result = Result.from_dict(
+        {
+            "status": "completed",
+            "result_type": "draw",
+            "winner_player_id": None,
+            "black_score": 0.75,
+            "white_score": 0.75,
+            "outcome_code": "draw",
+        }
+    )
+    tournament.rounds.append(
+        Round.create(number=1, games=[game], pairing_method="swiss", pairing_seed=1)
+    )
+
+    standings = calculate_standings(tournament)
+
+    alice_entry = next(entry for entry in standings if entry.player.id == alice.id)
+    bob_entry = next(entry for entry in standings if entry.player.id == bob.id)
+
+    assert alice_entry.game_score == 0.75
+    assert alice_entry.score == 0.75
+    assert alice_entry.draws == 1
+    assert bob_entry.game_score == 0.75
+    assert bob_entry.score == 0.75
+    assert bob_entry.draws == 1
 
 
 def test_record_result_rejects_invalid_winner_value() -> None:

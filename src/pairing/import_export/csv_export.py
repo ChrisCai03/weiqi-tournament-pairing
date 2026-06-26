@@ -93,7 +93,18 @@ def pairings_to_csv(tournament: Tournament) -> str:
 def results_to_csv(tournament: Tournament) -> str:
     buffer = StringIO()
     writer = csv.writer(buffer)
-    writer.writerow(["Round", "Board", "Winner", "Result Type", "Entered At"])
+    writer.writerow(
+        [
+            "Round",
+            "Board",
+            "Winner",
+            "Result Type",
+            "outcome_code",
+            "black_score",
+            "white_score",
+            "Entered At",
+        ]
+    )
     for round_obj in tournament.rounds:
         for game in round_obj.games:
             result = game.result
@@ -103,6 +114,9 @@ def results_to_csv(tournament: Tournament) -> str:
                     game.board_number,
                     _player_name(tournament, result.winner_player_id),
                     result.result_type,
+                    result.outcome_code or "",
+                    "" if result.black_score is None else result.black_score,
+                    "" if result.white_score is None else result.white_score,
                     result.entered_at or "",
                 ]
             )

@@ -112,7 +112,16 @@ def test_complete_five_round_swiss_realistic_open_trial(tmp_path) -> None:
     _assert_csv_report(
         service,
         "results",
-        expected_header=["Round", "Board", "Winner", "Result Type", "Entered At"],
+        expected_header=[
+            "Round",
+            "Board",
+            "Winner",
+            "Result Type",
+            "outcome_code",
+            "black_score",
+            "white_score",
+            "Entered At",
+        ],
         expected_rows=80,
     )
     _assert_csv_report(
@@ -180,7 +189,16 @@ def test_complete_five_round_mcmahon_realistic_open_trial(tmp_path) -> None:
     _assert_csv_report(
         service,
         "results",
-        expected_header=["Round", "Board", "Winner", "Result Type", "Entered At"],
+        expected_header=[
+            "Round",
+            "Board",
+            "Winner",
+            "Result Type",
+            "outcome_code",
+            "black_score",
+            "white_score",
+            "Entered At",
+        ],
         expected_rows=80,
     )
     _assert_csv_report(

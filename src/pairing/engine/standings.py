@@ -6,6 +6,7 @@ from typing import Callable
 from pairing.domain.player import Player
 from pairing.domain.tournament import Tournament
 from pairing.engine.history import colour_history_by_player, opponent_ids_by_player
+from pairing.engine.scoring import player_game_contribution
 
 
 @dataclass(slots=True)
@@ -16,6 +17,7 @@ class StandingEntry:
     score: float = 0.0
     wins: int = 0
     losses: int = 0
+    draws: int = 0
     byes: int = 0
     opponents: list[str] = field(default_factory=list)
     colours: list[str] = field(default_factory=list)
@@ -49,43 +51,17 @@ def calculate_standings(
         if round_obj.status == "stale":
             continue
         for game in round_obj.games:
-            result = game.result
-            if result.status != "completed":
-                continue
-
-            if result.result_type == "bye" and result.winner_player_id is not None:
-                bye_entry = entries[result.winner_player_id]
-                bye_entry.game_score += tournament.config.score_bye
-                bye_entry.score += tournament.config.score_bye
-                bye_entry.wins += 1
-                bye_entry.byes += 1
-                continue
-
-            if game.black_player_id is None or game.white_player_id is None:
-                continue
-
-            black_entry = entries[game.black_player_id]
-            white_entry = entries[game.white_player_id]
-
-            if result.winner_player_id == game.black_player_id:
-                black_entry.game_score += tournament.config.score_win
-                black_entry.score += tournament.config.score_win
-                black_entry.wins += 1
-                white_entry.game_score += tournament.config.score_loss
-                white_entry.score += tournament.config.score_loss
-                white_entry.losses += 1
-            elif result.winner_player_id == game.white_player_id:
-                white_entry.game_score += tournament.config.score_win
-                white_entry.score += tournament.config.score_win
-                white_entry.wins += 1
-                black_entry.game_score += tournament.config.score_loss
-                black_entry.score += tournament.config.score_loss
-                black_entry.losses += 1
-            elif result.result_type == "draw":
-                black_entry.game_score += tournament.config.score_draw
-                black_entry.score += tournament.config.score_draw
-                white_entry.game_score += tournament.config.score_draw
-                white_entry.score += tournament.config.score_draw
+            for player_id in (game.black_player_id, game.white_player_id):
+                if player_id is None:
+                    continue
+                entry = entries[player_id]
+                contribution = player_game_contribution(game, player_id, tournament.config)
+                entry.game_score += contribution.score
+                entry.score += contribution.score
+                entry.wins += contribution.wins
+                entry.losses += contribution.losses
+                entry.draws += contribution.draws
+                entry.byes += contribution.byes
 
     for entry in entries.values():
         entry.sos = sum(entries[opponent_id].score for opponent_id in entry.opponents)

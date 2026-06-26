@@ -185,6 +185,50 @@ def test_generate_later_round_warns_when_repeat_is_unavoidable() -> None:
     )
 
 
+def test_generate_later_round_ignores_void_games_in_pairing_history() -> None:
+    tournament = Tournament.create("Void Reset", round_count=2)
+    alice = Player.create("Alice", rank="4d", seed_number=1)
+    bob = Player.create("Bob", rank="3d", seed_number=2)
+    cara = Player.create("Cara", rank="2d", seed_number=3)
+    devin = Player.create("Devin", rank="1d", seed_number=4)
+    tournament.players.extend([alice, bob, cara, devin])
+
+    round_one = Round.create(
+        number=1,
+        games=[
+            _completed_outcome_game(
+                round_number=1,
+                board_number=1,
+                black_player_id=alice.id,
+                white_player_id=bob.id,
+                outcome_code="void",
+                config=tournament.config,
+            ),
+            _completed_outcome_game(
+                round_number=1,
+                board_number=2,
+                black_player_id=cara.id,
+                white_player_id=devin.id,
+                outcome_code="void",
+                config=tournament.config,
+            ),
+        ],
+        pairing_method="swiss",
+        pairing_seed=1,
+    )
+    round_one.status = "completed"
+    tournament.rounds.append(round_one)
+
+    round_two = generate_next_round(tournament)
+
+    assert [
+        frozenset((game.black_player_id, game.white_player_id)) for game in round_two.games
+    ] == [
+        frozenset((alice.id, bob.id)),
+        frozenset((cara.id, devin.id)),
+    ]
+
+
 def test_generate_later_round_assigns_one_bye_to_the_lowest_scoring_eligible_player() -> None:
     tournament = Tournament.create("Example Weiqi Open", round_count=3)
     alice = Player.create("Alice", rank="5d", seed_number=1)
@@ -497,6 +541,31 @@ def _bye_game(*, round_number: int, board_number: int, player_id: str) -> Game:
         pairing_explanation=[],
     )
     game.result = Result.completed(result_type="bye", winner_player_id=player_id)
+    return game
+
+
+def _completed_outcome_game(
+    *,
+    round_number: int,
+    board_number: int,
+    black_player_id: str,
+    white_player_id: str,
+    outcome_code: str,
+    config,
+) -> Game:
+    game = Game.create(
+        round_number=round_number,
+        board_number=board_number,
+        black_player_id=black_player_id,
+        white_player_id=white_player_id,
+        pairing_explanation=[],
+    )
+    game.result = Result.completed_outcome(
+        outcome_code=outcome_code,
+        black_player_id=black_player_id,
+        white_player_id=white_player_id,
+        config=config,
+    )
     return game
 
 
