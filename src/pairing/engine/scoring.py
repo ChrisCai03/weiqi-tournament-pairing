@@ -98,7 +98,7 @@ def counts_as_played(result: Result, config: TournamentConfig) -> bool:
         return False
     if result.outcome_code is None:
         if result.result_type == "void":
-            return False
+            return config.count_void_as_played
         if result.result_type == "both_win":
             return config.count_both_win_as_played
         if result.result_type == "both_loss":

@@ -335,10 +335,11 @@ def test_counts_as_played_honours_both_result_and_void_policies() -> None:
     assert counts_as_played(result_void, permissive_config) is True
 
 
-def test_counts_as_played_treats_legacy_void_results_as_unplayed() -> None:
+def test_counts_as_played_treats_legacy_void_results_as_unplayed_by_default() -> None:
     legacy_void = Result.completed(result_type="void", winner_player_id=None)
 
-    assert counts_as_played(legacy_void, TournamentConfig(count_void_as_played=True)) is False
+    assert counts_as_played(legacy_void, TournamentConfig()) is False
+    assert counts_as_played(legacy_void, TournamentConfig(count_void_as_played=True)) is True
 
 
 def test_results_csv_includes_outcome_code_and_persisted_scores() -> None:

@@ -188,7 +188,7 @@ def test_history_helpers_skip_legacy_both_results_when_config_marks_them_unplaye
     assert diana_entry.sos == 0.0
 
 
-def test_history_helpers_skip_legacy_void_results() -> None:
+def test_history_helpers_skip_legacy_void_results_by_default() -> None:
     tournament = Tournament.create("Example Weiqi Open")
     alice = Player.create("Alice", rank="4d", seed_number=1)
     bob = Player.create("Bob", rank="3d", seed_number=2)
@@ -219,6 +219,67 @@ def test_history_helpers_skip_legacy_void_results() -> None:
         alice.id: [],
         bob.id: [],
     }
+
+
+def test_history_helpers_count_legacy_void_results_when_policy_allows_it() -> None:
+    tournament = Tournament.create("Example Weiqi Open")
+    tournament.config.count_void_as_played = True
+
+    alice = Player.create("Alice", rank="4d", seed_number=1)
+    bob = Player.create("Bob", rank="3d", seed_number=2)
+    charlie = Player.create("Charlie", rank="2d", seed_number=3)
+    tournament.players.extend([alice, bob, charlie])
+
+    legacy_void_game = Game.create(
+        round_number=1,
+        board_number=1,
+        black_player_id=alice.id,
+        white_player_id=bob.id,
+        pairing_explanation=[],
+    )
+    legacy_void_game.result = Result.completed(result_type="void", winner_player_id=None)
+
+    bob_wins_game = Game.create(
+        round_number=2,
+        board_number=1,
+        black_player_id=bob.id,
+        white_player_id=charlie.id,
+        pairing_explanation=[],
+    )
+    bob_wins_game.result = Result.completed(result_type="normal", winner_player_id=bob.id)
+
+    tournament.rounds.extend(
+        [
+            Round.create(
+                number=1,
+                games=[legacy_void_game],
+                pairing_method="swiss",
+                pairing_seed=1,
+            ),
+            Round.create(
+                number=2,
+                games=[bob_wins_game],
+                pairing_method="swiss",
+                pairing_seed=2,
+            ),
+        ]
+    )
+
+    standings = calculate_standings(tournament)
+
+    alice_entry = next(entry for entry in standings if entry.player.id == alice.id)
+    bob_entry = next(entry for entry in standings if entry.player.id == bob.id)
+    charlie_entry = next(entry for entry in standings if entry.player.id == charlie.id)
+
+    assert alice_entry.opponents == [bob.id]
+    assert bob_entry.opponents == [alice.id, charlie.id]
+    assert charlie_entry.opponents == [bob.id]
+    assert alice_entry.colours == ["black"]
+    assert bob_entry.colours == ["white", "black"]
+    assert charlie_entry.colours == ["white"]
+    assert alice_entry.sos == 1.0
+    assert bob_entry.sos == 0.0
+    assert charlie_entry.sos == 1.0
 
 
 def test_calculate_standings_excludes_pending_pairings_from_history_and_sos() -> None:
