@@ -35,7 +35,7 @@ def result_contribution(
     if outcome_code == "draw":
         return ScoreContribution(score=score or 0.0, draws=1)
     if outcome_code == "bye":
-        if score == config.score_bye:
+        if score is not None and score != 0.0:
             return ScoreContribution(score=score or 0.0, wins=1, byes=1)
         return ScoreContribution(score=score or 0.0)
     if outcome_code == "both_win":
@@ -98,8 +98,13 @@ def player_game_contribution(
 def counts_as_played(result: Result, config: TournamentConfig) -> bool:
     if result.status != "completed":
         return False
-    if result.outcome_code is None and result.result_type == "void":
-        return False
+    if result.outcome_code is None:
+        if result.result_type == "void":
+            return False
+        if result.result_type == "both_win":
+            return config.count_both_win_as_played
+        if result.result_type == "both_loss":
+            return config.count_both_loss_as_played
     if result.outcome_code == "both_win":
         return config.count_both_win_as_played
     if result.outcome_code == "both_loss":

@@ -125,6 +125,69 @@ def test_history_helpers_count_both_results_once_and_skip_void_games() -> None:
     }
 
 
+def test_history_helpers_skip_legacy_both_results_when_config_marks_them_unplayed() -> None:
+    tournament = Tournament.create("Example Weiqi Open")
+    tournament.config.count_both_win_as_played = False
+    tournament.config.count_both_loss_as_played = False
+
+    alice = Player.create("Alice", rank="4d", seed_number=1)
+    bob = Player.create("Bob", rank="3d", seed_number=2)
+    charlie = Player.create("Charlie", rank="2d", seed_number=3)
+    diana = Player.create("Diana", rank="1d", seed_number=4)
+    tournament.players.extend([alice, bob, charlie, diana])
+
+    legacy_both_win_game = Game.create(
+        round_number=1,
+        board_number=1,
+        black_player_id=alice.id,
+        white_player_id=bob.id,
+        pairing_explanation=[],
+    )
+    legacy_both_win_game.result = Result.completed(
+        result_type="both_win",
+        winner_player_id=None,
+    )
+    legacy_both_loss_game = Game.create(
+        round_number=1,
+        board_number=2,
+        black_player_id=charlie.id,
+        white_player_id=diana.id,
+        pairing_explanation=[],
+    )
+    legacy_both_loss_game.result = Result.completed(
+        result_type="both_loss",
+        winner_player_id=None,
+    )
+    tournament.rounds.append(
+        Round.create(
+            number=1,
+            games=[legacy_both_win_game, legacy_both_loss_game],
+            pairing_method="swiss",
+            pairing_seed=1,
+        )
+    )
+
+    standings = calculate_standings(tournament)
+
+    alice_entry = next(entry for entry in standings if entry.player.id == alice.id)
+    bob_entry = next(entry for entry in standings if entry.player.id == bob.id)
+    charlie_entry = next(entry for entry in standings if entry.player.id == charlie.id)
+    diana_entry = next(entry for entry in standings if entry.player.id == diana.id)
+
+    assert alice_entry.opponents == []
+    assert bob_entry.opponents == []
+    assert charlie_entry.opponents == []
+    assert diana_entry.opponents == []
+    assert alice_entry.colours == []
+    assert bob_entry.colours == []
+    assert charlie_entry.colours == []
+    assert diana_entry.colours == []
+    assert alice_entry.sos == 0.0
+    assert bob_entry.sos == 0.0
+    assert charlie_entry.sos == 0.0
+    assert diana_entry.sos == 0.0
+
+
 def test_history_helpers_skip_legacy_void_results() -> None:
     tournament = Tournament.create("Example Weiqi Open")
     alice = Player.create("Alice", rank="4d", seed_number=1)

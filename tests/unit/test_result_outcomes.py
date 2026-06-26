@@ -201,6 +201,37 @@ def test_with_game_context_preserves_historical_scores_for_rich_results() -> Non
 
 
 @pytest.mark.parametrize(
+    ("black_player_id", "white_player_id", "side", "expected_score"),
+    [
+        ("black-1", None, "black", 2.0),
+        (None, "white-1", "white", 2.0),
+    ],
+)
+def test_result_contribution_counts_rich_byes_from_persisted_outcome_scores(
+    black_player_id: str | None,
+    white_player_id: str | None,
+    side: str,
+    expected_score: float,
+) -> None:
+    result = Result.completed_outcome(
+        outcome_code="bye",
+        black_player_id=black_player_id,
+        white_player_id=white_player_id,
+        config=TournamentConfig(score_bye=2.0),
+    )
+
+    contribution = result_contribution(
+        result,
+        side=side,
+        config=TournamentConfig(score_bye=1.0),
+    )
+
+    assert contribution.score == expected_score
+    assert contribution.wins == 1
+    assert contribution.byes == 1
+
+
+@pytest.mark.parametrize(
     ("outcome_code", "side", "expected"),
     [
         ("black_forfeit", "black", {"wins": 1, "losses": 0, "forfeits": 0, "no_shows": 0}),
@@ -269,6 +300,8 @@ def test_counts_as_played_honours_both_result_and_void_policies() -> None:
         white_player_id="white-1",
         config=TournamentConfig(),
     )
+    legacy_both_win = Result.completed(result_type="both_win", winner_player_id=None)
+    legacy_both_loss = Result.completed(result_type="both_loss", winner_player_id=None)
 
     strict_config = TournamentConfig(
         count_both_win_as_played=False,
@@ -280,6 +313,8 @@ def test_counts_as_played_honours_both_result_and_void_policies() -> None:
     assert counts_as_played(result_both_win, strict_config) is False
     assert counts_as_played(result_both_loss, strict_config) is False
     assert counts_as_played(result_void, strict_config) is False
+    assert counts_as_played(legacy_both_win, strict_config) is False
+    assert counts_as_played(legacy_both_loss, strict_config) is False
     assert counts_as_played(result_both_win, TournamentConfig()) is True
     assert counts_as_played(result_both_loss, TournamentConfig()) is True
     assert counts_as_played(result_void, permissive_config) is True
