@@ -136,3 +136,54 @@ def test_participation_record_rejects_non_finite_adjustments(score_adjustment: f
 
     with pytest.raises(ValueError, match="Participation score adjustment must be finite"):
         tournament.validate()
+
+
+@pytest.mark.parametrize("round_number", [1.5, 2.25])
+def test_participation_record_rejects_non_integer_round_numbers(round_number: float) -> None:
+    record = ParticipationRecord(player_id=" player-1 ", round_number=round_number, status="withdrawn")
+
+    with pytest.raises(ValueError, match="Participation round number"):
+        record.validate()
+
+
+def test_tournament_validation_rejects_non_integer_participation_round_numbers() -> None:
+    player = _player("Non Integer Round", 1)
+    tournament = _tournament(player)
+    tournament.participation.append(
+        ParticipationRecord(player_id=player.id, round_number=1.5, status="withdrawn")
+    )
+
+    with pytest.raises(ValueError, match="Participation round number"):
+        tournament.validate()
+
+
+def test_participation_lookup_rejects_non_integer_round_numbers() -> None:
+    player = _player("Lookup Round", 1)
+    tournament = _tournament(player)
+
+    with pytest.raises(ValueError, match="Participation round number"):
+        tournament.participation_status(player.id, 1.5)
+
+    with pytest.raises(ValueError, match="Participation round number"):
+        tournament.eligible_players(1.5)
+
+
+def test_participation_record_from_dict_rejects_non_integer_round_numbers() -> None:
+    with pytest.raises(ValueError):
+        ParticipationRecord.from_dict(
+            {"player_id": "player-1", "round_number": 1.5, "status": "withdrawn"}
+        )
+
+
+def test_participation_validation_rejects_whitespace_variants_of_duplicate_player_ids() -> None:
+    player = _player("Duplicate Trimmed", 1)
+    tournament = _tournament(player)
+    tournament.participation.extend(
+        [
+            ParticipationRecord(player_id=player.id, round_number=2, status="withdrawn"),
+            ParticipationRecord(player_id=f" {player.id} ", round_number=2, status="absent"),
+        ]
+    )
+
+    with pytest.raises(ValueError, match="Duplicate participation record"):
+        tournament.validate()

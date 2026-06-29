@@ -6,7 +6,7 @@ from pairing.domain.validation import (
     require_choice,
     require_finite_number,
     require_non_blank,
-    require_positive,
+    require_positive_integer,
 )
 
 PARTICIPATION_RECORD_STATUSES = frozenset({"absent", "withdrawn", "reentered", "late_entry"})
@@ -22,7 +22,7 @@ class ParticipationRecord:
 
     def validate(self, *, late_entry_missed_round_score: float = 0.0) -> None:
         self.player_id = require_non_blank(self.player_id, "Participation player id")
-        require_positive(self.round_number, "Participation round number")
+        self.round_number = require_positive_integer(self.round_number, "Participation round number")
         require_choice(self.status, PARTICIPATION_RECORD_STATUSES, "participation status")
         self.reason = self.reason.strip()
         if self.score_adjustment is None:
@@ -48,7 +48,10 @@ class ParticipationRecord:
         score_adjustment = data.get("score_adjustment")
         return cls(
             player_id=str(data["player_id"]),
-            round_number=int(data["round_number"]),
+            round_number=require_positive_integer(
+                data["round_number"],
+                "Participation round number",
+            ),
             status=str(data["status"]),
             reason=str(data.get("reason", "")),
             score_adjustment=None if score_adjustment is None else float(score_adjustment),

@@ -17,6 +17,7 @@ from pairing.domain.validation import (
     require_choice,
     require_non_blank,
     require_positive,
+    require_positive_integer,
     require_unique,
 )
 
@@ -299,10 +300,6 @@ class Tournament:
             seed_numbers.append(player.seed_number)
         require_unique(seed_numbers, "player seed number")
 
-        require_unique(
-            ((record.player_id, record.round_number) for record in self.participation),
-            "participation record",
-        )
         for record in self.participation:
             record.validate(
                 late_entry_missed_round_score=self.config.late_entry_missed_round_score,
@@ -315,6 +312,10 @@ class Tournament:
                 raise ValueError(
                     "Participation round number must not exceed configured round count."
                 )
+        require_unique(
+            ((record.player_id, record.round_number) for record in self.participation),
+            "participation record",
+        )
 
         for round_obj in self.rounds:
             round_obj.validate()
@@ -407,7 +408,7 @@ class Tournament:
         raise ValueError(f"Unknown player {player_id}.")
 
     def _validate_participation_round_number(self, round_number: int) -> None:
-        require_positive(round_number, "Participation round number")
+        require_positive_integer(round_number, "Participation round number")
         if round_number > self.config.round_count:
             raise ValueError("Participation round number must not exceed configured round count.")
 

@@ -55,6 +55,12 @@ def require_positive(value: int, label: str) -> int:
     return value
 
 
+def require_positive_integer(value: object, label: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f"{label} must be a positive integer.")
+    return require_positive(value, label)
+
+
 def require_finite_number(value: float, label: str) -> float:
     if not math.isfinite(value):
         raise ValueError(f"{label} must be finite.")
