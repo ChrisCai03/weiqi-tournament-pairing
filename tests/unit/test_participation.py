@@ -223,6 +223,30 @@ def test_tournament_validation_rejects_games_for_ineligible_participation_states
     reentered_tournament.validate()
 
 
+def test_tournament_validation_rejects_withdrawn_players_in_non_completed_rounds_without_records() -> None:
+    active_tournament = _tournament(_player("Active", 1), _player("Withdrawn", 2, status="withdrawn"))
+    withdrawn_player = active_tournament.players[1]
+    active_tournament.rounds.append(
+        Round.create(
+            number=1,
+            games=[
+                Game.create(
+                    round_number=1,
+                    board_number=1,
+                    black_player_id=withdrawn_player.id,
+                    white_player_id=active_tournament.players[0].id,
+                    pairing_explanation=[],
+                )
+            ],
+            pairing_method=active_tournament.format,
+            pairing_seed=active_tournament.config.random_seed,
+        )
+    )
+
+    with pytest.raises(ValueError, match="withdrawn"):
+        active_tournament.validate()
+
+
 def test_participation_record_rejects_duplicate_player_round_entries() -> None:
     player = _player("Duplicate", 1)
     tournament = _tournament(player)

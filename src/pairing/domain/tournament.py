@@ -345,6 +345,7 @@ class Tournament:
             round_obj.validate()
             game_ids.extend(game.id for game in round_obj.games)
             appearances: set[str] = set()
+            include_player_status = round_obj.status not in {"completed", "stale"}
             for game in round_obj.games:
                 game_players = [
                     player_id
@@ -360,7 +361,7 @@ class Tournament:
                     participation_status = self._participation_status_for_player(
                         self._player_by_id(player_id),
                         round_obj.number,
-                        include_player_status=False,
+                        include_player_status=include_player_status,
                     )
                     if participation_status not in {"active", "reentered", "late_entry"}:
                         raise ValueError(

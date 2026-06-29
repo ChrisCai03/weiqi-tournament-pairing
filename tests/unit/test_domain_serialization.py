@@ -294,21 +294,31 @@ def test_tournament_from_dict_allows_legacy_withdrawn_player_history_without_par
     withdrawn_player = Player.create("Withdrawn", rank="1k", seed_number=2)
     withdrawn_player.status = "withdrawn"
     tournament.players.extend([active_player, withdrawn_player])
+    historical_round = Round.create(
+        number=1,
+        games=[
+            Game.create(
+                round_number=1,
+                board_number=1,
+                black_player_id=withdrawn_player.id,
+                white_player_id=active_player.id,
+                pairing_explanation=[],
+            )
+        ],
+        pairing_method="swiss",
+        pairing_seed=1,
+    )
+    historical_round.status = "completed"
+    historical_round.completed_at = "2026-06-25T01:00:00+00:00"
+    historical_round.games[0].result = Result.completed(
+        result_type="normal",
+        winner_player_id=active_player.id,
+        black_player_id=withdrawn_player.id,
+        white_player_id=active_player.id,
+        config=tournament.config,
+    )
     tournament.rounds.append(
-        Round.create(
-            number=1,
-            games=[
-                Game.create(
-                    round_number=1,
-                    board_number=1,
-                    black_player_id=withdrawn_player.id,
-                    white_player_id=active_player.id,
-                    pairing_explanation=[],
-                )
-            ],
-            pairing_method="swiss",
-            pairing_seed=1,
-        )
+        historical_round
     )
 
     payload = tournament.to_dict()
@@ -318,6 +328,7 @@ def test_tournament_from_dict_allows_legacy_withdrawn_player_history_without_par
 
     assert restored.rounds[0].games[0].black_player_id == withdrawn_player.id
     assert restored.rounds[0].games[0].white_player_id == active_player.id
+    assert restored.rounds[0].status == "completed"
     assert restored.eligible_players(2) == [active_player]
 
 
