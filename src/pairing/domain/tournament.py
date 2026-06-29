@@ -357,7 +357,11 @@ class Tournament:
                             f"Round {round_obj.number} board {game.board_number} "
                             f"references unknown player {player_id}."
                         )
-                    participation_status = self.participation_status(player_id, round_obj.number)
+                    participation_status = self._participation_status_for_player(
+                        self._player_by_id(player_id),
+                        round_obj.number,
+                        include_player_status=False,
+                    )
                     if participation_status not in {"active", "reentered", "late_entry"}:
                         raise ValueError(
                             f"Player {player_id} is not eligible for round {round_obj.number}: "
@@ -442,7 +446,13 @@ class Tournament:
         if round_number > self.config.round_count:
             raise ValueError("Participation round number must not exceed configured round count.")
 
-    def _participation_status_for_player(self, player: Player, round_number: int) -> str:
+    def _participation_status_for_player(
+        self,
+        player: Player,
+        round_number: int,
+        *,
+        include_player_status: bool = True,
+    ) -> str:
         records = sorted(
             (record for record in self.participation if record.player_id == player.id),
             key=lambda record: record.round_number,
@@ -458,7 +468,7 @@ class Tournament:
         if first_late_entry_round is not None and round_number < first_late_entry_round:
             return "not_entered"
 
-        carried_status = "active" if player.status == "active" else "withdrawn"
+        carried_status = "withdrawn" if include_player_status and player.status == "withdrawn" else "active"
         exact_record: ParticipationRecord | None = None
         for record in records:
             if record.round_number > round_number:

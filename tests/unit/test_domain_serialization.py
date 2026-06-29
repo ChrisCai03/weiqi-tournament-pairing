@@ -288,6 +288,39 @@ def test_tournament_from_dict_normalizes_legacy_missing_participation_without_en
     assert restored.to_dict()["participation"] == []
 
 
+def test_tournament_from_dict_allows_legacy_withdrawn_player_history_without_participation_records() -> None:
+    tournament = Tournament.create("Legacy Withdrawn History Open")
+    active_player = Player.create("Active", rank="1d", seed_number=1)
+    withdrawn_player = Player.create("Withdrawn", rank="1k", seed_number=2)
+    withdrawn_player.status = "withdrawn"
+    tournament.players.extend([active_player, withdrawn_player])
+    tournament.rounds.append(
+        Round.create(
+            number=1,
+            games=[
+                Game.create(
+                    round_number=1,
+                    board_number=1,
+                    black_player_id=withdrawn_player.id,
+                    white_player_id=active_player.id,
+                    pairing_explanation=[],
+                )
+            ],
+            pairing_method="swiss",
+            pairing_seed=1,
+        )
+    )
+
+    payload = tournament.to_dict()
+    payload.pop("participation", None)
+
+    restored = Tournament.from_dict(payload)
+
+    assert restored.rounds[0].games[0].black_player_id == withdrawn_player.id
+    assert restored.rounds[0].games[0].white_player_id == active_player.id
+    assert restored.eligible_players(2) == [active_player]
+
+
 def test_tournament_participation_round_trip_preserves_status_reason_and_adjustment() -> None:
     tournament = Tournament.create("Participation Serialization Open")
     tournament.config.late_entry_missed_round_score = 0.5
