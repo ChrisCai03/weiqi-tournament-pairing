@@ -3,6 +3,7 @@ import pytest
 from pairing.domain.audit import AuditLogEntry
 from pairing.domain.config import TournamentConfig
 from pairing.domain.game import Game
+from pairing.domain.participation import ParticipationRecord
 from pairing.domain.player import Player
 from pairing.domain.result import Result
 from pairing.domain.round import Round
@@ -274,3 +275,75 @@ def test_tournament_from_dict_loads_legacy_completed_results_without_scores() ->
     assert round_payload["games"][1]["result"]["black_score"] == 1.0
     assert round_payload["games"][1]["result"]["white_score"] == 0.0
     assert round_payload["games"][1]["result"]["outcome_code"] == "bye"
+
+
+def test_tournament_from_dict_normalizes_legacy_missing_participation_without_entries() -> None:
+    tournament = Tournament.create("Legacy Participation Open")
+    payload = tournament.to_dict()
+    payload.pop("participation", None)
+
+    restored = Tournament.from_dict(payload)
+
+    assert restored.participation == []
+    assert restored.to_dict()["participation"] == []
+
+
+def test_tournament_participation_round_trip_preserves_status_reason_and_adjustment() -> None:
+    tournament = Tournament.create("Participation Serialization Open")
+    tournament.config.late_entry_missed_round_score = 0.5
+    absent_player = Player.create("Absent", rank="1d", seed_number=1)
+    late_player = Player.create("Late", rank="1k", seed_number=2)
+    tournament.players.extend([absent_player, late_player])
+
+    payload = tournament.to_dict()
+    payload["players"] = [absent_player.to_dict(), late_player.to_dict()]
+    payload["participation"] = [
+        {
+            "player_id": absent_player.id,
+            "round_number": 2,
+            "status": "absent",
+            "reason": "travel",
+            "score_adjustment": 0.0,
+        },
+        {
+            "player_id": late_player.id,
+            "round_number": 3,
+            "status": "late_entry",
+            "reason": "joined after round 2",
+        },
+    ]
+
+    restored = Tournament.from_dict(payload)
+
+    assert restored.participation == [
+        ParticipationRecord(
+            player_id=absent_player.id,
+            round_number=2,
+            status="absent",
+            reason="travel",
+            score_adjustment=0.0,
+        ),
+        ParticipationRecord(
+            player_id=late_player.id,
+            round_number=3,
+            status="late_entry",
+            reason="joined after round 2",
+            score_adjustment=0.5,
+        ),
+    ]
+    assert restored.to_dict()["participation"] == [
+        {
+            "player_id": absent_player.id,
+            "round_number": 2,
+            "status": "absent",
+            "reason": "travel",
+            "score_adjustment": 0.0,
+        },
+        {
+            "player_id": late_player.id,
+            "round_number": 3,
+            "status": "late_entry",
+            "reason": "joined after round 2",
+            "score_adjustment": 0.5,
+        },
+    ]

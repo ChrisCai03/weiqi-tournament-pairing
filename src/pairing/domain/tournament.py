@@ -6,10 +6,12 @@ from uuid import uuid4
 
 from pairing.domain.audit import AuditLogEntry
 from pairing.domain.config import TournamentConfig
+from pairing.domain.participation import ParticipationRecord
 from pairing.domain.player import Player
 from pairing.domain.result import Result
 from pairing.domain.round import Round
 from pairing.domain.validation import (
+    PLAYER_STATUSES,
     TOURNAMENT_FORMATS,
     TOURNAMENT_STATUSES,
     require_choice,
@@ -31,6 +33,7 @@ class Tournament:
     schema_version: int
     config: TournamentConfig
     players: list[Player] = field(default_factory=list)
+    participation: list[ParticipationRecord] = field(default_factory=list)
     teams: list[dict[str, object]] = field(default_factory=list)
     rounds: list[Round] = field(default_factory=list)
     manual_overrides: list[dict[str, object]] = field(default_factory=list)
@@ -259,6 +262,20 @@ class Tournament:
         )
         return stale_rounds
 
+    def participation_status(self, player_id: str, round_number: int) -> str:
+        player = self._player_by_id(player_id)
+        self._validate_participation_round_number(round_number)
+        return self._participation_status_for_player(player, round_number)
+
+    def eligible_players(self, round_number: int) -> list[Player]:
+        self._validate_participation_round_number(round_number)
+        return [
+            player
+            for player in self.players
+            if self._participation_status_for_player(player, round_number)
+            in {"active", "reentered", "late_entry"}
+        ]
+
     def validate(self) -> None:
         require_non_blank(self.id, "Tournament id")
         self.name = require_non_blank(self.name, "Tournament name")
@@ -277,9 +294,27 @@ class Tournament:
         for player in self.players:
             require_non_blank(player.id, "Player id")
             player.display_name = require_non_blank(player.display_name, "Player name")
+            player.status = require_choice(player.status, PLAYER_STATUSES, "player status")
             require_positive(player.seed_number, "Player seed number")
             seed_numbers.append(player.seed_number)
         require_unique(seed_numbers, "player seed number")
+
+        require_unique(
+            ((record.player_id, record.round_number) for record in self.participation),
+            "participation record",
+        )
+        for record in self.participation:
+            record.validate(
+                late_entry_missed_round_score=self.config.late_entry_missed_round_score,
+            )
+            if record.player_id not in player_ids:
+                raise ValueError(
+                    f"Participation record references unknown player {record.player_id}."
+                )
+            if record.round_number > self.config.round_count:
+                raise ValueError(
+                    "Participation round number must not exceed configured round count."
+                )
 
         for round_obj in self.rounds:
             round_obj.validate()
@@ -330,6 +365,7 @@ class Tournament:
             },
             "config": self.config.to_dict(),
             "players": [player.to_dict() for player in self.players],
+            "participation": [record.to_dict() for record in self.participation],
             "teams": self.teams,
             "rounds": [round_obj.to_dict() for round_obj in self.rounds],
             "manual_overrides": self.manual_overrides,
@@ -349,6 +385,10 @@ class Tournament:
             schema_version=int(data.get("schema_version", SCHEMA_VERSION)),
             config=config,
             players=[Player.from_dict(dict(player)) for player in data.get("players", [])],
+            participation=[
+                ParticipationRecord.from_dict(dict(record))
+                for record in data.get("participation", [])
+            ],
             teams=[dict(team) for team in data.get("teams", [])],
             rounds=[
                 Round.from_dict(dict(round_data), config=config)
@@ -359,6 +399,49 @@ class Tournament:
         )
         tournament.validate()
         return tournament
+
+    def _player_by_id(self, player_id: str) -> Player:
+        for player in self.players:
+            if player.id == player_id:
+                return player
+        raise ValueError(f"Unknown player {player_id}.")
+
+    def _validate_participation_round_number(self, round_number: int) -> None:
+        require_positive(round_number, "Participation round number")
+        if round_number > self.config.round_count:
+            raise ValueError("Participation round number must not exceed configured round count.")
+
+    def _participation_status_for_player(self, player: Player, round_number: int) -> str:
+        records = sorted(
+            (record for record in self.participation if record.player_id == player.id),
+            key=lambda record: record.round_number,
+        )
+        first_late_entry_round = min(
+            (
+                record.round_number
+                for record in records
+                if record.status == "late_entry"
+            ),
+            default=None,
+        )
+        if first_late_entry_round is not None and round_number < first_late_entry_round:
+            return "not_entered"
+
+        carried_status = "active" if player.status == "active" else "withdrawn"
+        exact_record: ParticipationRecord | None = None
+        for record in records:
+            if record.round_number > round_number:
+                break
+            if record.round_number == round_number:
+                exact_record = record
+            if record.status == "withdrawn":
+                carried_status = "withdrawn"
+            elif record.status in {"reentered", "late_entry"}:
+                carried_status = "active"
+
+        if exact_record is not None:
+            return exact_record.status
+        return carried_status
 
 
 def _utc_now_iso() -> str:

@@ -3,6 +3,7 @@
 from pairing.domain.audit import AuditLogEntry
 from pairing.domain.config import TournamentConfig
 from pairing.domain.game import Game
+from pairing.domain.participation import ParticipationRecord
 from pairing.domain.player import Player, Rank, RankParseError, parse_rank
 from pairing.domain.result import Result
 from pairing.domain.round import Round
@@ -11,6 +12,7 @@ from pairing.domain.tournament import SCHEMA_VERSION, Tournament
 __all__ = [
     "AuditLogEntry",
     "Game",
+    "ParticipationRecord",
     "Player",
     "Rank",
     "RankParseError",
