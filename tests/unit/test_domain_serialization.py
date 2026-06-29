@@ -347,3 +347,24 @@ def test_tournament_participation_round_trip_preserves_status_reason_and_adjustm
             "score_adjustment": 0.5,
         },
     ]
+
+
+@pytest.mark.parametrize(
+    "round_number",
+    ["2", 1.5, "1.5", 0, -1],
+)
+def test_participation_record_from_dict_parses_numeric_string_round_numbers(
+    round_number: object,
+) -> None:
+    if round_number == "2":
+        record = ParticipationRecord.from_dict(
+            {"player_id": "player-1", "round_number": round_number, "status": "withdrawn"}
+        )
+
+        assert record.round_number == 2
+        return
+
+    with pytest.raises(ValueError):
+        ParticipationRecord.from_dict(
+            {"player_id": "player-1", "round_number": round_number, "status": "withdrawn"}
+        )

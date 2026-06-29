@@ -2,8 +2,10 @@ import math
 
 import pytest
 
+from pairing.domain.game import Game
 from pairing.domain.participation import ParticipationRecord
 from pairing.domain.player import Player
+from pairing.domain.round import Round
 from pairing.domain.tournament import Tournament
 
 
@@ -82,6 +84,103 @@ def test_late_entry_defaults_adjustment_from_tournament_config() -> None:
     assert tournament.participation_status(player.id, 4) == "active"
     assert [item.id for item in tournament.eligible_players(2)] == []
     assert [item.id for item in tournament.eligible_players(3)] == [player.id]
+
+
+def test_tournament_validation_rejects_games_for_ineligible_participation_states() -> None:
+    late_entry_tournament = _tournament(_player("Late Entry", 1), _player("Opponent", 2))
+    late_entry_player = late_entry_tournament.players[0]
+    late_entry_tournament.participation.append(
+        ParticipationRecord(player_id=late_entry_player.id, round_number=3, status="late_entry")
+    )
+    late_entry_tournament.rounds.append(
+        Round.create(
+            number=1,
+            games=[
+                Game.create(
+                    round_number=1,
+                    board_number=1,
+                    black_player_id=late_entry_player.id,
+                    white_player_id=late_entry_tournament.players[1].id,
+                    pairing_explanation=[],
+                )
+            ],
+            pairing_method=late_entry_tournament.format,
+            pairing_seed=late_entry_tournament.config.random_seed,
+        )
+    )
+
+    with pytest.raises(ValueError, match="not_entered"):
+        late_entry_tournament.validate()
+
+    absent_tournament = _tournament(_player("Absent", 1), _player("Opponent", 2))
+    absent_player = absent_tournament.players[0]
+    absent_tournament.participation.append(
+        ParticipationRecord(player_id=absent_player.id, round_number=1, status="absent")
+    )
+    absent_tournament.rounds.append(
+        Round.create(
+            number=1,
+            games=[
+                Game.create(
+                    round_number=1,
+                    board_number=1,
+                    black_player_id=absent_player.id,
+                    white_player_id=absent_tournament.players[1].id,
+                    pairing_explanation=[],
+                )
+            ],
+            pairing_method=absent_tournament.format,
+            pairing_seed=absent_tournament.config.random_seed,
+        )
+    )
+
+    with pytest.raises(ValueError, match="absent"):
+        absent_tournament.validate()
+
+    active_tournament = _tournament(_player("Active", 1), _player("Opponent", 2))
+    active_tournament.rounds.append(
+        Round.create(
+            number=1,
+            games=[
+                Game.create(
+                    round_number=1,
+                    board_number=1,
+                    black_player_id=active_tournament.players[0].id,
+                    white_player_id=active_tournament.players[1].id,
+                    pairing_explanation=[],
+                )
+            ],
+            pairing_method=active_tournament.format,
+            pairing_seed=active_tournament.config.random_seed,
+        )
+    )
+    active_tournament.validate()
+
+    reentered_tournament = _tournament(_player("Withdrawn", 1), _player("Opponent", 2))
+    reentered_player = reentered_tournament.players[0]
+    reentered_tournament.participation.extend(
+        [
+            ParticipationRecord(player_id=reentered_player.id, round_number=1, status="withdrawn"),
+            ParticipationRecord(player_id=reentered_player.id, round_number=2, status="reentered"),
+        ]
+    )
+    reentered_tournament.rounds.append(
+        Round.create(
+            number=2,
+            games=[
+                Game.create(
+                    round_number=2,
+                    board_number=1,
+                    black_player_id=reentered_player.id,
+                    white_player_id=reentered_tournament.players[1].id,
+                    pairing_explanation=[],
+                )
+            ],
+            pairing_method=reentered_tournament.format,
+            pairing_seed=reentered_tournament.config.random_seed,
+        )
+    )
+    reentered_tournament.validate()
 
 
 def test_participation_record_rejects_duplicate_player_round_entries() -> None:

@@ -333,6 +333,12 @@ class Tournament:
                             f"Round {round_obj.number} board {game.board_number} "
                             f"references unknown player {player_id}."
                         )
+                    participation_status = self.participation_status(player_id, round_obj.number)
+                    if participation_status not in {"active", "reentered", "late_entry"}:
+                        raise ValueError(
+                            f"Player {player_id} is not eligible for round {round_obj.number}: "
+                            f"{participation_status}."
+                        )
                     if player_id in appearances:
                         raise ValueError(
                             f"Player {player_id} appears more than once in round "
