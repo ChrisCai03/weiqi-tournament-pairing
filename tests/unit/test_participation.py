@@ -86,6 +86,31 @@ def test_late_entry_defaults_adjustment_from_tournament_config() -> None:
     assert [item.id for item in tournament.eligible_players(3)] == [player.id]
 
 
+@pytest.mark.parametrize(
+    ("earlier_status", "late_entry_round"),
+    [("absent", 3), ("withdrawn", 4)],
+)
+def test_tournament_validation_rejects_participation_before_first_late_entry(
+    earlier_status: str,
+    late_entry_round: int,
+) -> None:
+    player = _player("Late History", 1)
+    tournament = _tournament(player)
+    tournament.participation.extend(
+        [
+            ParticipationRecord(player_id=player.id, round_number=2, status=earlier_status),
+            ParticipationRecord(
+                player_id=player.id,
+                round_number=late_entry_round,
+                status="late_entry",
+            ),
+        ]
+    )
+
+    with pytest.raises(ValueError, match="late entry"):
+        tournament.validate()
+
+
 def test_tournament_validation_rejects_games_for_ineligible_participation_states() -> None:
     late_entry_tournament = _tournament(_player("Late Entry", 1), _player("Opponent", 2))
     late_entry_player = late_entry_tournament.players[0]

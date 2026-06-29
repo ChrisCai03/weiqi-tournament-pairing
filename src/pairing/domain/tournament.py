@@ -317,6 +317,28 @@ class Tournament:
             "participation record",
         )
 
+        participation_by_player: dict[str, list[ParticipationRecord]] = {}
+        for record in self.participation:
+            participation_by_player.setdefault(record.player_id, []).append(record)
+
+        for player_id, records in participation_by_player.items():
+            first_late_entry_round = min(
+                (
+                    record.round_number
+                    for record in records
+                    if record.status == "late_entry"
+                ),
+                default=None,
+            )
+            if first_late_entry_round is None:
+                continue
+            for record in records:
+                if record.round_number < first_late_entry_round:
+                    raise ValueError(
+                        f"Participation record for player {player_id} before first late entry "
+                        f"round {first_late_entry_round}."
+                    )
+
         for round_obj in self.rounds:
             round_obj.validate()
             game_ids.extend(game.id for game in round_obj.games)
