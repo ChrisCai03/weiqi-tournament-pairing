@@ -322,14 +322,16 @@ class Tournament:
             participation_by_player.setdefault(record.player_id, []).append(record)
 
         for player_id, records in participation_by_player.items():
-            first_late_entry_round = min(
-                (
-                    record.round_number
-                    for record in records
-                    if record.status == "late_entry"
-                ),
-                default=None,
-            )
+            late_entry_rounds = [
+                record.round_number
+                for record in records
+                if record.status == "late_entry"
+            ]
+            if len(late_entry_rounds) > 1:
+                raise ValueError(
+                    f"Player {player_id} has multiple late entry participation records."
+                )
+            first_late_entry_round = min(late_entry_rounds, default=None)
             if first_late_entry_round is None:
                 continue
             for record in records:

@@ -86,6 +86,21 @@ def test_late_entry_defaults_adjustment_from_tournament_config() -> None:
     assert [item.id for item in tournament.eligible_players(3)] == [player.id]
 
 
+def test_tournament_validation_rejects_repeated_late_entry_after_reentry() -> None:
+    player = _player("Late Return", 1)
+    tournament = _tournament(player)
+    tournament.participation.extend(
+        [
+            ParticipationRecord(player_id=player.id, round_number=3, status="late_entry"),
+            ParticipationRecord(player_id=player.id, round_number=4, status="withdrawn"),
+            ParticipationRecord(player_id=player.id, round_number=5, status="late_entry"),
+        ]
+    )
+
+    with pytest.raises(ValueError, match="late entry"):
+        tournament.validate()
+
+
 @pytest.mark.parametrize(
     ("earlier_status", "late_entry_round"),
     [("absent", 3), ("withdrawn", 4)],
