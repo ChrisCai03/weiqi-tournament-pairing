@@ -383,3 +383,36 @@ def test_results_csv_includes_outcome_code_and_persisted_scores() -> None:
             "Entered At": "",
         }
     ]
+
+
+def test_results_csv_preserves_existing_prefix_and_appends_rich_columns() -> None:
+    tournament = Tournament.create("Example Weiqi Open")
+    alice = Player.create("Alice", rank="3d", seed_number=1)
+    bob = Player.create("Bob", rank="2d", seed_number=2)
+    tournament.players.extend([alice, bob])
+
+    game = Game.create(
+        round_number=1,
+        board_number=1,
+        black_player_id=alice.id,
+        white_player_id=bob.id,
+        pairing_explanation=[],
+    )
+    game.result = Result.from_dict(
+        {
+            "status": "completed",
+            "result_type": "both_win",
+            "winner_player_id": None,
+            "black_score": 2.0,
+            "white_score": 2.0,
+            "outcome_code": "both_win",
+        }
+    )
+    tournament.rounds.append(
+        Round.create(number=1, games=[game], pairing_method="swiss", pairing_seed=1)
+    )
+
+    header = next(csv.reader(StringIO(results_to_csv(tournament))))
+
+    assert header[:5] == ["Round", "Board", "Winner", "Result Type", "Entered At"]
+    assert header[5:] == ["outcome_code", "black_score", "white_score"]

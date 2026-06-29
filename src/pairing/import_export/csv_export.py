@@ -99,10 +99,10 @@ def results_to_csv(tournament: Tournament) -> str:
             "Board",
             "Winner",
             "Result Type",
+            "Entered At",
             "outcome_code",
             "black_score",
             "white_score",
-            "Entered At",
         ]
     )
     for round_obj in tournament.rounds:
@@ -114,10 +114,10 @@ def results_to_csv(tournament: Tournament) -> str:
                     game.board_number,
                     _player_name(tournament, result.winner_player_id),
                     result.result_type,
+                    result.entered_at or "",
                     result.outcome_code or "",
                     "" if result.black_score is None else result.black_score,
                     "" if result.white_score is None else result.white_score,
-                    result.entered_at or "",
                 ]
             )
     return buffer.getvalue()

@@ -117,10 +117,10 @@ def test_complete_five_round_swiss_realistic_open_trial(tmp_path) -> None:
             "Board",
             "Winner",
             "Result Type",
+            "Entered At",
             "outcome_code",
             "black_score",
             "white_score",
-            "Entered At",
         ],
         expected_rows=80,
     )
@@ -194,10 +194,10 @@ def test_complete_five_round_mcmahon_realistic_open_trial(tmp_path) -> None:
             "Board",
             "Winner",
             "Result Type",
+            "Entered At",
             "outcome_code",
             "black_score",
             "white_score",
-            "Entered At",
         ],
         expected_rows=80,
     )
