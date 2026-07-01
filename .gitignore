@@ -4,6 +4,7 @@ __pycache__/
 .pytest_cache/
 .superpowers/
 .tmp/
+.pairing_audit_key
 .coverage
 *.egg-info/
 *.py[cod]
