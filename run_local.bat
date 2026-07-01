@@ -1,6 +1,7 @@
 @echo off
 setlocal
 
+if not "%~1"=="" set "TOURNAMENT_PATH=%~f1"
 cd /d "%~dp0"
 set "PYTHONPATH=src"
 
@@ -10,10 +11,10 @@ if "%~1"=="" (
         python -m pairing.cli.main demo ".tmp\demo.tgo.json"
         if errorlevel 1 exit /b 1
     )
-    set "TOURNAMENT_FILE=.tmp\demo.tgo.json"
+    set "TOURNAMENT_PATH=.tmp\demo.tgo.json"
 ) else (
-    set "TOURNAMENT_FILE=%~1"
+    rem TOURNAMENT_PATH already normalized before changing directories.
 )
 
-python -m pairing.cli.main web "%TOURNAMENT_FILE%" --host 127.0.0.1 --port 8123 --open-browser
+python -m pairing.cli.main web "%TOURNAMENT_PATH%" --host 127.0.0.1 --port 8123 --open-browser
 exit /b %ERRORLEVEL%
