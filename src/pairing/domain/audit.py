@@ -32,6 +32,7 @@ class AuditLogEntry:
     details: dict[str, object] = field(default_factory=dict)
     state_hash_before: str | None = None
     state_hash_after: str | None = None
+    signature: str | None = None
 
     @classmethod
     def create(
@@ -68,4 +69,5 @@ class AuditLogEntry:
             details=dict(data.get("details", {})),
             state_hash_before=_optional_str(data.get("state_hash_before")),
             state_hash_after=_optional_str(data.get("state_hash_after")),
+            signature=_optional_str(data.get("signature")),
         )
