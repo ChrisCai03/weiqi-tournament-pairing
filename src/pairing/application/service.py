@@ -33,8 +33,16 @@ from pairing.storage import load_tournament, save_tournament
 
 
 class TournamentService:
-    def __init__(self, tournament_path: str | Path) -> None:
+    def __init__(
+        self,
+        tournament_path: str | Path,
+        *,
+        auto_sign_audit: bool = False,
+        audit_key_path: str | Path | None = None,
+    ) -> None:
         self.path = Path(tournament_path)
+        self.auto_sign_audit = auto_sign_audit
+        self.audit_key_path = Path(audit_key_path) if audit_key_path is not None else None
 
     @classmethod
     def create(
@@ -123,7 +131,7 @@ class TournamentService:
                 },
             )
         )
-        save_tournament(tournament, self.path)
+        self._save(tournament)
         return RoundOutcome(
             round_number=round_obj.number,
             game_count=len(round_obj.games),
@@ -147,7 +155,7 @@ class TournamentService:
             winner=winner,
             actor=actor,
         )
-        save_tournament(tournament, self.path)
+        self._save(tournament)
         return ResultOutcome(
             round_number=round_number,
             board_number=board_number,
@@ -170,7 +178,7 @@ class TournamentService:
             winner=winner,
             actor=actor,
         )
-        save_tournament(tournament, self.path)
+        self._save(tournament)
         return ResultOutcome(
             round_number=round_number,
             board_number=board_number,
@@ -191,7 +199,7 @@ class TournamentService:
         ]
         stale_rounds = tournament.purge_stale_rounds()
         if boundary_round >= tournament.config.round_count:
-            save_tournament(tournament, self.path)
+            self._save(tournament)
             return None
 
         round_obj = generate_next_round(tournament)
@@ -211,7 +219,7 @@ class TournamentService:
                 },
             )
         )
-        save_tournament(tournament, self.path)
+        self._save(tournament)
         return RoundOutcome(
             round_number=round_obj.number,
             game_count=len(round_obj.games),
@@ -245,13 +253,13 @@ class TournamentService:
 
     def sign_audit(self, *, key_path: str | Path | None = None) -> AuditVerificationReport:
         tournament = load_tournament(self.path)
-        normalized_key_path = Path(key_path) if key_path is not None else None
+        normalized_key_path = self._audit_key_path(key_path)
         sign_audit_log(tournament, key_path=normalized_key_path)
         save_tournament(tournament, self.path)
         return verify_audit_log(self.path, key_path=normalized_key_path)
 
     def verify_audit(self, *, key_path: str | Path | None = None) -> AuditVerificationReport:
-        normalized_key_path = Path(key_path) if key_path is not None else None
+        normalized_key_path = self._audit_key_path(key_path)
         return verify_audit_log(self.path, key_path=normalized_key_path)
 
     def load(self) -> Tournament:
@@ -267,8 +275,18 @@ class TournamentService:
         if not report.valid:
             raise ValueError("\n".join(report.errors))
         tournament.add_players(report.players, actor=actor)
-        save_tournament(tournament, self.path)
+        self._save(tournament)
         return ImportOutcome(
             imported_count=len(report.players),
             warnings=tuple(report.warnings),
         )
+
+    def _save(self, tournament: Tournament) -> None:
+        if self.auto_sign_audit:
+            sign_audit_log(tournament, key_path=self.audit_key_path)
+        save_tournament(tournament, self.path)
+
+    def _audit_key_path(self, key_path: str | Path | None) -> Path | None:
+        if key_path is not None:
+            return Path(key_path)
+        return self.audit_key_path

@@ -36,6 +36,7 @@ def test_web_console_page_renders_tournament_tabs(tmp_path) -> None:
 
 def test_web_pairings_post_generates_round_and_redirects(tmp_path) -> None:
     tournament_path = tmp_path / "example.tgo.json"
+    key_path = tmp_path / ".pairing_audit_key"
     tournament = Tournament.create("Example Weiqi Open")
     tournament.players.extend(
         [
@@ -59,6 +60,8 @@ def test_web_pairings_post_generates_round_and_redirects(tmp_path) -> None:
     saved = load_tournament(tournament_path)
     assert [round_obj.number for round_obj in saved.rounds] == [1]
     assert saved.rounds[0].pairing_method == "swiss"
+    assert key_path.exists()
+    assert all(entry.signature for entry in saved.audit_log)
 
 
 def test_web_public_display_renders_latest_pairing(tmp_path) -> None:
@@ -135,10 +138,9 @@ def test_web_reports_hub_lists_print_friendly_views(tmp_path) -> None:
     assert "/reports/standings" in body
 
 
-def test_web_audit_page_reports_unsigned_tournament_without_creating_key(tmp_path, monkeypatch) -> None:
+def test_web_audit_page_reports_unsigned_tournament_without_creating_key(tmp_path) -> None:
     tournament_path = tmp_path / "example.tgo.json"
     key_path = tmp_path / ".pairing_audit_key"
-    monkeypatch.chdir(tmp_path)
     tournament = Tournament.create("Example Weiqi Open")
     save_tournament(tournament, tournament_path)
 
@@ -153,10 +155,9 @@ def test_web_audit_page_reports_unsigned_tournament_without_creating_key(tmp_pat
     assert not key_path.exists()
 
 
-def test_web_audit_sign_post_signs_file_and_redirects(tmp_path, monkeypatch) -> None:
+def test_web_audit_sign_post_signs_file_and_redirects(tmp_path) -> None:
     tournament_path = tmp_path / "example.tgo.json"
     key_path = tmp_path / ".pairing_audit_key"
-    monkeypatch.chdir(tmp_path)
     tournament = Tournament.create("Example Weiqi Open")
     save_tournament(tournament, tournament_path)
 

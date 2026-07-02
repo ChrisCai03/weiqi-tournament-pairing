@@ -121,3 +121,23 @@ satisfied. The branch is ready for review and integration into `main`.
   - expose audit verification status in the web UI
   - decide whether mutating service operations should auto-sign by default
   - add future key-provider/encryption abstraction before broader deployment
+
+## 2026-07-02 - Web audit controls and automatic web signing
+
+- Added an `Audit` tab to the local web UI.
+- Added `GET /audit` for director-facing verification status:
+  - pass/fail status
+  - current tournament state hash
+  - verification error list
+  - signed/unsigned audit-entry counts
+- Added `POST /audit/sign` to sign the current audit log from the web UI.
+- Changed audit verification so a read-only verify no longer creates a missing
+  local key. Signing remains the operation that creates the key.
+- Configured the web app to auto-sign after mutating web operations using a
+  `.pairing_audit_key` beside the active tournament file.
+- CLI audit commands remain manual and can use `--key-path`; without it they
+  use the current working directory.
+- Verification evidence at this checkpoint:
+  - `python -m pytest tests/unit/test_audit_integrity.py tests/unit/test_cli.py tests/unit/test_web_app.py tests/unit/test_web_routing.py -q` -> 37 passed
+  - `python -m pytest tests/unit/test_application_service.py tests/unit/test_audit_integrity.py tests/unit/test_cli.py tests/unit/test_web_app.py tests/unit/test_web_routing.py -q` -> 46 passed
+  - focused Ruff checks on changed source/tests -> passed

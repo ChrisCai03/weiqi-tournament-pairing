@@ -28,9 +28,9 @@ Status: first slice complete.
 - Windows click-and-go local launcher - complete
 - local HMAC-SHA256 audit-log signing and verification - complete
 - source-file tamper detection through tournament state hashes - complete
+- director-facing audit verification workflow in the web UI - complete
+- automatic signing after mutating web operations - complete
 - future key-provider/encryption abstraction - planned
-- director-facing audit verification workflow in the web UI - planned
-- automatic signing after mutating service operations - planned
 
 ## Milestone C: Reports and Tournament Trials
 

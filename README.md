@@ -72,8 +72,11 @@ pairing audit-verify event.tgo.json
 ```
 
 The local signing key defaults to `.pairing_audit_key`, which is intentionally
-ignored by Git. If a source-level edit changes the tournament file after
-signing, verification reports the state-hash mismatch.
+ignored by Git. The web app stores this key beside the active tournament file
+and automatically re-signs after web mutations; CLI commands use the current
+working directory unless `--key-path` is provided. If a source-level edit
+changes the tournament file after signing, verification reports the state-hash
+mismatch.
 
 A new round cannot be generated until the preceding round is complete.
 Unavoidable repeat opponents produce explicit warnings instead of stopping the
