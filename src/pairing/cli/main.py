@@ -103,6 +103,34 @@ def build_parser() -> argparse.ArgumentParser:
         help="Correct winning colour.",
     )
 
+    audit_sign_parser = subparsers.add_parser(
+        "audit-sign",
+        help="Sign the audit log with a local tamper-evident key.",
+    )
+    audit_sign_parser.add_argument(
+        "tournament_path",
+        help="Existing .tgo.json tournament file.",
+    )
+    audit_sign_parser.add_argument(
+        "--key-path",
+        default=None,
+        help="Path to the local audit key. Defaults to .pairing_audit_key.",
+    )
+
+    audit_verify_parser = subparsers.add_parser(
+        "audit-verify",
+        help="Verify audit log signatures and tournament state hash.",
+    )
+    audit_verify_parser.add_argument(
+        "tournament_path",
+        help="Existing .tgo.json tournament file.",
+    )
+    audit_verify_parser.add_argument(
+        "--key-path",
+        default=None,
+        help="Path to the local audit key. Defaults to .pairing_audit_key.",
+    )
+
     return parser
 
 
@@ -196,6 +224,28 @@ def main(argv: list[str] | None = None) -> int:
                 f"{args.round_number} board {args.board_number}."
             )
             return 0
+
+        if args.command == "audit-sign":
+            report = TournamentService(args.tournament_path).sign_audit(key_path=args.key_path)
+            if not report.valid:
+                print("Audit log signed, but verification failed.")
+                for error in report.errors:
+                    print(f"- {error}")
+                return 1
+
+            print(f"Audit log signed. State hash: {report.current_state_hash}")
+            return 0
+
+        if args.command == "audit-verify":
+            report = TournamentService(args.tournament_path).verify_audit(key_path=args.key_path)
+            if report.valid:
+                print(f"Audit verification passed. State hash: {report.current_state_hash}")
+                return 0
+
+            print("Audit verification failed.")
+            for error in report.errors:
+                print(f"- {error}")
+            return 1
 
         if args.command == "web":
             serve_tournament(

@@ -2,6 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from pairing.application.audit_integrity import (
+    AuditVerificationReport,
+    sign_audit_log,
+    verify_audit_log,
+)
 from pairing.application.results import (
     CreateOutcome,
     ImportOutcome,
@@ -237,6 +242,17 @@ class TournamentService:
         except KeyError as exc:
             raise ValueError(f"Unknown CSV report: {report}.") from exc
         return exporter(tournament)
+
+    def sign_audit(self, *, key_path: str | Path | None = None) -> AuditVerificationReport:
+        tournament = load_tournament(self.path)
+        normalized_key_path = Path(key_path) if key_path is not None else None
+        sign_audit_log(tournament, key_path=normalized_key_path)
+        save_tournament(tournament, self.path)
+        return verify_audit_log(self.path, key_path=normalized_key_path)
+
+    def verify_audit(self, *, key_path: str | Path | None = None) -> AuditVerificationReport:
+        normalized_key_path = Path(key_path) if key_path is not None else None
+        return verify_audit_log(self.path, key_path=normalized_key_path)
 
     def load(self) -> Tournament:
         return load_tournament(self.path)

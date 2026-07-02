@@ -460,3 +460,48 @@ def test_cli_enter_result_marks_future_rounds_stale_when_correction_breaks_histo
     loaded_tournament = load_tournament(tournament_path)
     assert loaded_tournament.rounds[1].status == "stale"
     assert loaded_tournament.audit_log[-1].event_type == "future_rounds_invalidated"
+
+
+def test_cli_audit_sign_and_verify_round_trip(tmp_path, capsys, monkeypatch) -> None:
+    tournament_path = tmp_path / "example.tgo.json"
+    key_path = tmp_path / ".pairing_audit_key"
+    monkeypatch.chdir(tmp_path)
+    TournamentService.create_demo(tournament_path)
+
+    sign_exit = main(["audit-sign", str(tournament_path), "--key-path", str(key_path)])
+    sign_output = capsys.readouterr()
+    verify_exit = main(["audit-verify", str(tournament_path), "--key-path", str(key_path)])
+    verify_output = capsys.readouterr()
+
+    loaded = load_tournament(tournament_path)
+    assert sign_exit == 0
+    assert "Audit log signed" in sign_output.out
+    assert key_path.exists()
+    assert all(entry.signature for entry in loaded.audit_log)
+    assert verify_exit == 0
+    assert "Audit verification passed" in verify_output.out
+
+
+def test_cli_audit_verify_returns_error_for_tampered_file(tmp_path, capsys, monkeypatch) -> None:
+    import json
+
+    tournament_path = tmp_path / "example.tgo.json"
+    key_path = tmp_path / ".pairing_audit_key"
+    monkeypatch.chdir(tmp_path)
+    TournamentService.create_demo(tournament_path)
+    assert main(["audit-sign", str(tournament_path), "--key-path", str(key_path)]) == 0
+    capsys.readouterr()
+
+    payload = json.loads(tournament_path.read_text(encoding="utf-8"))
+    payload["players"][0]["display_name"] = "Mallory"
+    tournament_path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    verify_exit = main(["audit-verify", str(tournament_path), "--key-path", str(key_path)])
+    verify_output = capsys.readouterr()
+
+    assert verify_exit == 1
+    assert "Audit verification failed" in verify_output.out
+    assert "state hash" in verify_output.out.lower()
