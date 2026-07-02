@@ -18,8 +18,19 @@ Status: complete after the verification evidence in `MAINTENANCE.md`.
 - withdrawal, late entry, and re-entry
 - manual pairing repair with explicit override records
 - result correction controls in the UI
-- audit-log display
-- explicitly supported scoring configuration
+- audit-log display and verification status in the UI
+- explicitly supported scoring/result policy configuration
+
+## Milestone B1: Local Integrity and Prototyping
+
+Status: first slice complete.
+
+- Windows click-and-go local launcher - complete
+- local HMAC-SHA256 audit-log signing and verification - complete
+- source-file tamper detection through tournament state hashes - complete
+- future key-provider/encryption abstraction - planned
+- director-facing audit verification workflow in the web UI - planned
+- automatic signing after mutating service operations - planned
 
 ## Milestone C: Reports and Tournament Trials
 

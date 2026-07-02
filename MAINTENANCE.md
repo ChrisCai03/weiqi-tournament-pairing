@@ -94,3 +94,30 @@ satisfied. The branch is ready for review and integration into `main`.
 - Normalized Ruff formatting for the print-report files in the main checkout
   after the merge exposed a Windows line-ending difference
 - Updated `PROJECT_CONTEXT.md` to identify `main` as the active baseline
+
+## 2026-07-02 - Local launcher and audit-integrity checkpoint
+
+- Active branch: `codex/stage-6-director-workflow`
+- Added `run_local.bat` for Windows click-and-go prototyping:
+  - default tournament: `.tmp\demo.tgo.json`
+  - default web URL: `http://127.0.0.1:8123/`
+  - existing `.tgo.json` files can be passed or dragged onto the script
+- Added tamper-evident local audit integrity:
+  - local key file: `.pairing_audit_key` (Git-ignored)
+  - algorithm: HMAC-SHA256 over canonical audit entries plus previous
+    signature
+  - state hash excludes audit integrity fields so source-level tournament edits
+    after signing are detected as state-hash mismatches
+  - current implementation intentionally leaves room for future key providers
+    and stronger encryption/signing backends
+- Added CLI operations:
+  - `pairing audit-sign event.tgo.json`
+  - `pairing audit-verify event.tgo.json`
+- Verification evidence at this checkpoint:
+  - `python -m pytest tests/unit/test_cli.py -q -k audit` -> 2 passed
+  - `python -m ruff check src\pairing\cli\main.py src\pairing\application\service.py tests\unit\test_cli.py` -> passed
+  - `python -m pytest tests/unit/test_run_local.py tests/unit/test_audit_integrity.py tests/unit/test_cli.py tests/unit/test_json_store.py -q` -> 43 passed
+- Remaining work:
+  - expose audit verification status in the web UI
+  - decide whether mutating service operations should auto-sign by default
+  - add future key-provider/encryption abstraction before broader deployment

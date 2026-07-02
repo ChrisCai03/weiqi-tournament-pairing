@@ -30,6 +30,11 @@ pairing demo demo.tgo.json
 pairing web demo.tgo.json --port 8000 --open-browser
 ```
 
+On Windows, double-click `run_local.bat` from the repository root to create or
+reuse `.tmp\demo.tgo.json` and open the local web UI on
+`http://127.0.0.1:8123/`. You can also drag an existing `.tgo.json` file onto
+the script to launch that tournament.
+
 The web server remains attached to the managing terminal. Stop it with
 `Ctrl+C`. Without `--open-browser`, open `http://127.0.0.1:8000/`.
 The web UI now includes a `Reports` area with print-friendly pairings,
@@ -59,6 +64,17 @@ pairing correct-result event.tgo.json --round 1 --board 1 --winner white
 pairing regenerate-from event.tgo.json --round 1
 ```
 
+Sign and verify the tamper-evident audit log:
+
+```powershell
+pairing audit-sign event.tgo.json
+pairing audit-verify event.tgo.json
+```
+
+The local signing key defaults to `.pairing_audit_key`, which is intentionally
+ignored by Git. If a source-level edit changes the tournament file after
+signing, verification reports the state-hash mismatch.
+
 A new round cannot be generated until the preceding round is complete.
 Unavoidable repeat opponents produce explicit warnings instead of stopping the
 tournament.
@@ -73,7 +89,9 @@ Supported:
 - CSV player import and report export
 - result entry and correction
 - auditable downstream regeneration
+- tamper-evident local audit-log signing and verification
 - local CLI and server-rendered web UI
+- Windows click-and-go local launcher
 - print-friendly report pages for pairings, results, and standings
 - realistic trial coverage with a 32-player fixture and deterministic
   five-round Swiss/McMahon simulations
