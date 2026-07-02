@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from html import escape
 
+from pairing.application.audit_integrity import AuditVerificationReport
 from pairing.domain.game import Game
 from pairing.domain.tournament import Tournament
 from pairing.engine.mcmahon import mcmahon_starting_score
@@ -15,6 +16,7 @@ def _render_page(tournament: Tournament, title: str, content: str, *, active_tab
         ("pairings", "Pairings", "/pairings"),
         ("results", "Results", "/results"),
         ("standings", "Standings", "/standings"),
+        ("audit", "Audit", "/audit"),
         ("exports", "Exports", "/exports"),
         ("reports", "Reports", "/reports"),
         ("display", "Display", "/display"),
@@ -60,6 +62,8 @@ def _render_page(tournament: Tournament, title: str, content: str, *, active_tab
           .grid-2 {{ display:grid; gap:12px; grid-template-columns: 1fr 1fr; }}
           .grid-3 {{ display:grid; gap:12px; grid-template-columns: 1fr 1fr 1fr; }}
           .pill {{ display:inline-block; padding: 4px 8px; border-radius: 999px; background: #eef2ff; color: #4338ca; font-size: 12px; }}
+          .pill.good {{ background:#dcfce7; color:#166534; }}
+          .pill.warn {{ background:#ffedd5; color:#9a3412; }}
           .error-box {{ background:#fff7ed; border:1px solid #fdba74; color:#9a3412; padding: 12px; border-radius: 10px; margin-bottom: 12px; }}
           .footer-note {{ margin-top:12px; color: var(--muted); font-size: 12px; }}
           .report-header {{ display:flex; justify-content:space-between; gap:16px; align-items:flex-start; margin-bottom: 12px; }}
@@ -264,6 +268,43 @@ def _render_exports_section() -> str:
         <a class="button" href="/exports/standings.csv">Standings CSV</a>
       </div>
       <p class="footer-note">CSV export is the first Stage 4 report surface. PDF can layer on top later.</p>
+    </div>
+    """
+
+
+def _render_audit_section(tournament: Tournament, report: AuditVerificationReport) -> str:
+    status_label = "Audit verification passed" if report.valid else "Audit verification failed"
+    status_class = "good" if report.valid else "warn"
+    error_items = "".join(f"<li>{escape(error)}</li>" for error in report.errors)
+    errors_html = (
+        f"<div class='error-box'><ul>{error_items}</ul></div>"
+        if report.errors
+        else "<p class='muted'>The audit chain matches the current tournament file.</p>"
+    )
+    signed_count = sum(1 for entry in tournament.audit_log if entry.signature)
+    total_count = len(tournament.audit_log)
+    return f"""
+    <div class="card">
+      <h2 class="section-title">Audit integrity</h2>
+      <div class="pill {status_class}">{escape(status_label)}</div>
+      <p class="footer-note">Current state hash: <code>{escape(report.current_state_hash or "unavailable")}</code></p>
+      {errors_html}
+      <form method="post" action="/audit/sign">
+        <div class="actions">
+          <button class="button primary" type="submit">Sign current audit log</button>
+        </div>
+      </form>
+      <p class="footer-note">Signing creates or reuses the local .pairing_audit_key file. Manual source-file edits remain possible, but verification will report state-hash or signature mismatches.</p>
+    </div>
+    <div class="card">
+      <h2 class="section-title">Audit log summary</h2>
+      <table>
+        <tbody>
+          <tr><th>Total entries</th><td>{total_count}</td></tr>
+          <tr><th>Signed entries</th><td>{signed_count}</td></tr>
+          <tr><th>Unsigned entries</th><td>{total_count - signed_count}</td></tr>
+        </tbody>
+      </table>
     </div>
     """
 

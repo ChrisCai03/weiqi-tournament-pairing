@@ -33,7 +33,10 @@ def serve_tournament(
     httpd, url = create_server(tournament_path, host=host, port=port)
     with httpd:
         print(f"Serving {Path(tournament_path).resolve()} at {url}")
-        print("Open /, /players, /pairings, /results, /standings, /reports, /exports, or /display")
+        print(
+            "Open /, /players, /pairings, /results, /standings, /audit, "
+            "/reports, /exports, or /display"
+        )
         if open_browser:
             webbrowser.open(url)
         httpd.serve_forever()

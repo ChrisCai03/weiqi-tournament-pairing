@@ -135,6 +135,40 @@ def test_web_reports_hub_lists_print_friendly_views(tmp_path) -> None:
     assert "/reports/standings" in body
 
 
+def test_web_audit_page_reports_unsigned_tournament_without_creating_key(tmp_path, monkeypatch) -> None:
+    tournament_path = tmp_path / "example.tgo.json"
+    key_path = tmp_path / ".pairing_audit_key"
+    monkeypatch.chdir(tmp_path)
+    tournament = Tournament.create("Example Weiqi Open")
+    save_tournament(tournament, tournament_path)
+
+    status, headers, body = _call_app(create_web_app(tournament_path), "GET", "/audit")
+
+    assert status.startswith("200")
+    assert headers["Content-Type"].startswith("text/html")
+    assert "Audit integrity" in body
+    assert "Audit verification failed" in body
+    assert "Audit key not found" in body
+    assert "/audit/sign" in body
+    assert not key_path.exists()
+
+
+def test_web_audit_sign_post_signs_file_and_redirects(tmp_path, monkeypatch) -> None:
+    tournament_path = tmp_path / "example.tgo.json"
+    key_path = tmp_path / ".pairing_audit_key"
+    monkeypatch.chdir(tmp_path)
+    tournament = Tournament.create("Example Weiqi Open")
+    save_tournament(tournament, tournament_path)
+
+    status, headers, _body = _call_app(create_web_app(tournament_path), "POST", "/audit/sign")
+
+    saved = load_tournament(tournament_path)
+    assert status.startswith("303")
+    assert headers["Location"] == "/audit"
+    assert key_path.exists()
+    assert all(entry.signature for entry in saved.audit_log)
+
+
 def test_web_pairings_print_report_renders_current_round(tmp_path) -> None:
     tournament_path = tmp_path / "example.tgo.json"
     tournament = Tournament.create("Example Weiqi Open")

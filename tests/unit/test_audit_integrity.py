@@ -86,6 +86,17 @@ def test_load_or_create_local_audit_key_creates_and_reuses_key(tmp_path) -> None
     assert key_path.read_text(encoding="utf-8").strip()
 
 
+def test_verify_audit_log_does_not_create_missing_local_key(tmp_path) -> None:
+    key_path = tmp_path / ".pairing_audit_key"
+    tournament = Tournament.create("Unsigned Open")
+
+    report = verify_audit_log(tournament, key_path=key_path)
+
+    assert report.valid is False
+    assert not key_path.exists()
+    assert any("Audit key not found" in error for error in report.errors)
+
+
 def test_verify_audit_log_rejects_unsigned_tournament() -> None:
     tournament = Tournament.create("Unsigned Open")
 

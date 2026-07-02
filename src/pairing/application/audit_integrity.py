@@ -23,7 +23,7 @@ class AuditVerificationReport:
 
 def load_or_create_local_audit_key(path: Path = Path(".pairing_audit_key")) -> bytes:
     if path.exists():
-        return bytes.fromhex(path.read_text(encoding="utf-8").strip())
+        return load_local_audit_key(path)
 
     key = os.urandom(32)
     path.write_text(key.hex(), encoding="utf-8")
@@ -32,6 +32,12 @@ def load_or_create_local_audit_key(path: Path = Path(".pairing_audit_key")) -> b
     except OSError:
         pass
     return key
+
+
+def load_local_audit_key(path: Path = Path(".pairing_audit_key")) -> bytes:
+    if not path.exists():
+        raise FileNotFoundError(f"Audit key not found: {path}")
+    return bytes.fromhex(path.read_text(encoding="utf-8").strip())
 
 
 def state_hash(tournament_or_payload: Tournament | dict[str, object]) -> str:
@@ -80,11 +86,19 @@ def verify_audit_log(
             current_state_hash="",
         )
 
-    signing_key = _resolve_key(key=key, key_path=key_path)
     current_hash = state_hash(tournament)
     errors: list[str] = []
     previous_signature = ""
     previous_state_hash: str | None = None
+
+    try:
+        signing_key = _resolve_key(key=key, key_path=key_path, create=False)
+    except (FileNotFoundError, ValueError) as exc:
+        return AuditVerificationReport(
+            valid=False,
+            errors=(str(exc),),
+            current_state_hash=current_hash,
+        )
 
     if not tournament.audit_log:
         errors.append("Audit log is empty; nothing to verify.")
@@ -130,10 +144,13 @@ def verify_audit_log(
     )
 
 
-def _resolve_key(*, key: bytes | None, key_path: Path | None) -> bytes:
+def _resolve_key(*, key: bytes | None, key_path: Path | None, create: bool = True) -> bytes:
     if key is not None:
         return key
-    return load_or_create_local_audit_key(key_path or Path(".pairing_audit_key"))
+    path = key_path or Path(".pairing_audit_key")
+    if create:
+        return load_or_create_local_audit_key(path)
+    return load_local_audit_key(path)
 
 
 def _coerce_tournament(tournament_or_path: Tournament | dict[str, object] | str | Path) -> Tournament:

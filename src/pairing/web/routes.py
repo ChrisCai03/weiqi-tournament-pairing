@@ -11,6 +11,7 @@ GET_ROUTES = {
     "/pairings": ("Pairings", "pairings", views._render_pairings_section),
     "/results": ("Results", "results", views._render_results_section),
     "/standings": ("Standings", "standings", views._render_standings_section),
+    "/audit": ("Audit", "audit", None),
     "/exports": ("Exports", "exports", lambda _tournament: views._render_exports_section()),
     "/reports": ("Reports", "reports", views._render_reports_section),
     "/reports/pairings": ("Pairings Report", "reports", views._render_pairings_report),
@@ -29,6 +30,7 @@ POST_ROUTES = {
     "/pairings/regenerate",
     "/results/enter",
     "/results/correct",
+    "/audit/sign",
 }
 
 
@@ -88,7 +90,21 @@ def _dispatch_get(service, path, start_response):
     tournament = service.load()
     if path == "/display":
         return html_response(start_response, 200, views._render_public_display(tournament))
+    if path == "/audit":
+        report = service.verify_audit()
+        return html_response(
+            start_response,
+            200,
+            views._render_page(
+                tournament,
+                "Audit",
+                views._render_audit_section(tournament, report),
+                active_tab="audit",
+            ),
+        )
     title, tab, renderer = GET_ROUTES[path]
+    if renderer is None:
+        raise ValueError(f"Route {path} has no renderer.")
     return html_response(
         start_response,
         200,
@@ -107,6 +123,9 @@ def _dispatch_post(service, path, environ, start_response):
     if path == "/pairings/regenerate":
         service.regenerate_from(int(form.get("round_number", "0") or "0"), actor="web")
         return redirect_response(start_response, "/pairings")
+    if path == "/audit/sign":
+        service.sign_audit()
+        return redirect_response(start_response, "/audit")
     result_args = {
         "round_number": int(form.get("round_number", "0") or "0"),
         "board_number": int(form.get("board_number", "0") or "0"),
