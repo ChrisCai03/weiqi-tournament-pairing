@@ -16,6 +16,18 @@ print-layout trial is complete.
 - One managing terminal only; do not split the workflow across multiple
   operators or background services
 
+## Quick Windows launcher
+
+For an immediate UI smoke test, double-click `run-demo.bat` in the repository
+root. It prepares its own local Python environment and opens the web UI using
+`demo-data/launcher-demo.tgo.json`. This is convenient for checking navigation,
+reports, and print layout before creating the full 32-player trial files below.
+
+The launcher demo is separate from `trial-open.tgo.json` and
+`trial-mcmahon.tgo.json`; use the commands in this runbook for the structured
+five-round field trial. Press `Ctrl+C` in the launcher window to stop its
+server.
+
 ## Sample event creation and import
 
 Swiss sample:

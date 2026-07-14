@@ -10,6 +10,27 @@ record; the CLI and simple web UI use the same application services.
 
 Python 3.12 or newer is required.
 
+## One-click Windows demo
+
+On Windows, double-click `run-demo.bat` for the quickest test. It creates a
+repository-local `.venv`, installs the project and development dependencies,
+creates `demo-data/launcher-demo.tgo.json` on first use, and opens the local
+web UI in the default browser. The first launch may need a network connection
+and can take longer while dependencies are downloaded.
+
+The server remains attached to the launcher window. Press `Ctrl+C` there to
+stop it. Later launches reuse both the environment and demo tournament, so
+changes made while testing are preserved.
+
+To reset only the tournament, delete
+`demo-data/launcher-demo.tgo.json`. To rebuild the Python environment, delete
+`.venv`. The next launch recreates either item automatically.
+
+When moving to another PC, copy or clone the repository but do not copy
+`.venv`; Python environments are machine-specific. Install Python 3.12 or
+newer on the new PC and double-click `run-demo.bat` to build a fresh local
+environment from `pyproject.toml`.
+
 ```powershell
 python -m pip install -e ".[dev]"
 ```

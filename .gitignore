@@ -4,6 +4,8 @@ __pycache__/
 .pytest_cache/
 .superpowers/
 .tmp/
+.venv/
+demo-data/
 .coverage
 *.egg-info/
 *.py[cod]
